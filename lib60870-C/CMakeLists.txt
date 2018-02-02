@@ -39,6 +39,7 @@ include_directories(
     ${CMAKE_CURRENT_LIST_DIR}/config
     ${CMAKE_CURRENT_LIST_DIR}/src/inc/api
     ${CMAKE_CURRENT_LIST_DIR}/src/inc/internal
+    ${CMAKE_CURRENT_LIST_DIR}/src/inc/vs
     ${CMAKE_CURRENT_LIST_DIR}/src/common/inc
     ${CMAKE_CURRENT_LIST_DIR}/src/hal/inc
     ${CMAKE_CURRENT_LIST_DIR}/src/tls
