@@ -233,6 +233,24 @@ CS104_Connection_sendClockSyncCommand(CS104_Connection self, int ca, CP56Time2a 
 bool
 CS104_Connection_sendTestCommand(CS104_Connection self, int ca);
 
+
+/**
+ * \brief Send a reset process command (C_RP_NA_1 typeID: 105)
+ *
+ * \param ca Common address of the slave/server
+ * \param qrp 复位进程命令限定词 QRP
+ *
+ * \return true if message was sent, false otherwise
+ */
+bool
+CS104_Connection_sendResetprocessCommand(CS104_Connection self, int ca, int qrp);//复位进程
+
+
+
+
+
+
+
 /**
  * \brief Send a process command to the controlled (or other) station
  *
@@ -245,6 +263,11 @@ CS104_Connection_sendTestCommand(CS104_Connection self, int ca);
 bool
 CS104_Connection_sendProcessCommand(CS104_Connection self, TypeID typeId, CS101_CauseOfTransmission cot,
         int ca, InformationObject command);
+
+//文件服务====
+bool
+CS104_Connection_sendFileservingCommand(CS104_Connection self, CS101_CauseOfTransmission cot, int ca, InformationObject sc);
+
 
 
 /**

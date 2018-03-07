@@ -7038,3 +7038,446 @@ FileDirectory_getFromBuffer(FileDirectory self, CS101_AppLayerParameters paramet
 
     return self;
 }
+
+
+//TI=210:文件服务
+/*************************************************
+ * FileServer(selfdefine) : InformationObject
+ *************************************************/
+
+//========== <210>	：文件服务 ==========//
+/*************************************************
+ * FileCallMenu : InformationObject 召目录
+ *************************************************/
+static bool
+FileCallMenu_encode(FileCallMenu self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+
+    Frame_setNextByte (frame, 2);//附加数据包类型 1-备用  2-文件传输  3-备用  4-备用
+
+    //uint8_t operateType;           //1字节:操作标识  1：读目录
+    //uint32_t catalogueID;          //4字节：目录ID
+    //uint8_t catalogueNamelength;   //1字节：目录名长度
+    //uint8_t* catalogueName;        //x字节：目录名
+    //uint8_t callflag;              //1字节：召唤标志(0：目录下所有文件；1：目录下满足搜索时间段的文件)
+    //struct sCP56Time2a startTime;  //7字节：查询起始时间
+    //struct sCP56Time2a endTime;    //7字节：查询终止时间
+    Frame_setNextByte (frame, self->operateType);
+
+    Frame_setNextByte (frame, (uint8_t)(self->catalogueID % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->catalogueID / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->catalogueID / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->catalogueID / 0x1000000) % 0x100));
+
+    Frame_setNextByte (frame, self->catalogueNamelength);
+
+    //Frame_appendBytes(frame, self->catalogueName, self->catalogueNamelength);
+    for(int i=0;i<self->catalogueNamelength;i++)
+    {
+       Frame_setNextByte (frame, (uint8_t)(self->catalogueName[i]));
+    }
+
+    Frame_setNextByte (frame, self->callflag);
+
+    Frame_appendBytes(frame, self->startTime.encodedValue, 7);
+    Frame_appendBytes(frame, self->endTime.encodedValue, 7);
+
+    return true;
+}
+
+struct sInformationObjectVFT FileCallMenuVFT = {
+        (EncodeFunction) FileCallMenu_encode,
+        (DestroyFunction) FileCallMenu_destroy
+};
+
+static void
+FileCallMenu_initialize(FileCallMenu self)
+{
+    self->virtualFunctionTable = &(FileCallMenuVFT);
+    self->type = F_FR_NA_1;
+}
+
+FileCallMenu FileCallMenu_create(FileCallMenu self, int ioa, uint8_t operateType, uint32_t catalogueID, uint8_t catalogueNamelength, char* catalogueName, uint8_t callflag, CP56Time2a startTime, CP56Time2a endTime)
+{
+    if (self == NULL)
+        self = (FileCallMenu) GLOBAL_MALLOC(sizeof(struct sFileCallMenu));
+
+    if (self != NULL) {
+        FileCallMenu_initialize(self);
+
+        self->objectAddress = ioa;
+        self->operateType = operateType;
+        self->catalogueID = catalogueID;
+        self->catalogueNamelength = catalogueNamelength;
+        self->catalogueName = catalogueName;
+        self->callflag = callflag;
+        self->startTime = *startTime;
+        self->endTime = *endTime;
+    }
+
+    return self;
+}
+
+FileCallMenu
+FileCallMenu_getFromBuffer(FileCallMenu self, CS101_AppLayerParameters parameters,
+        uint8_t* msg, int msgSize, int startIndex, bool isSequence)
+{
+
+    if (self == NULL)
+       self = (FileCallMenu) GLOBAL_MALLOC(sizeof(struct sFileCallMenu));
+
+    if (self != NULL) {
+
+        FileCallMenu_initialize(self);
+
+        if (!isSequence) {
+            InformationObject_getFromBuffer((InformationObject) self, parameters, msg, startIndex);
+
+            startIndex += parameters->sizeOfIOA; /* skip IOA */
+        }
+
+        self->operateType = msg[startIndex++];
+
+        self->catalogueID = msg [startIndex++];
+        self->catalogueID += (msg [startIndex++] * 0x100);
+        self->catalogueID += (msg [startIndex++] * 0x10000);
+        self->catalogueID += (msg [startIndex++] * 0x1000000);
+
+        self->catalogueNamelength = msg[startIndex++];
+
+        for(int i=0;i<self->catalogueNamelength;i++)
+        {
+            self->catalogueName[i]=msg[startIndex++];
+        }
+
+        self->callflag = msg[startIndex++];
+
+        CP56Time2a_getFromBuffer(&(self->startTime), msg, msgSize, startIndex);
+        CP56Time2a_getFromBuffer(&(self->endTime), msg, msgSize, startIndex);
+    }
+
+    return self;
+}
+
+void FileCallMenu_destroy(FileCallMenu self)
+{
+    GLOBAL_FREEMEM(self);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+/*************************************************
+ * FileCallMenuAffirm : InformationObject 召目录激活确认
+ *************************************************/
+//FileCallMenuAffirm
+static bool
+FileCallMenuAffirm_encode(FileCallMenuAffirm self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+
+    Frame_setNextByte (frame, 2);//附加数据包类型 1-备用  2-文件传输  3-备用  4-备用
+
+//    uint8_t operateType;           //1字节:操作标识  2：读目录(目录召唤确认)
+//    uint8_t resultDescribe;        //1字节:结果描述字 0-成功 1-失败
+//    uint32_t catalogueID;          //4字节：目录ID
+//    uint8_t followupFlag;          //1字节:后续标志,0：无后续,1：有后续
+//    uint8_t file_num;              //1字节：本帧文件数量(通常1帧数据5个目录名称)
+    Frame_setNextByte (frame, self->operateType);
+
+    Frame_setNextByte (frame, self->resultDescribe);
+
+    Frame_setNextByte (frame, (uint8_t)(self->catalogueID % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->catalogueID / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->catalogueID / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->catalogueID / 0x1000000) % 0x100));
+
+    Frame_setNextByte (frame, self->resultDescribe);
+
+    Frame_setNextByte (frame, self->file_num);
+
+    for(int i=0;i<self->file_num;i++)//目录数据组包
+    {
+
+    }
+
+    return true;
+}
+
+struct sInformationObjectVFT FileCallMenuAffirmVFT = {
+        (EncodeFunction) FileCallMenuAffirm_encode,
+        (DestroyFunction) FileCallMenuAffirm_destroy
+};
+
+static void
+FileCallMenuAffirm_initialize(FileCallMenuAffirm self)
+{
+    self->virtualFunctionTable = &(FileCallMenuAffirmVFT);
+    self->type = F_FR_NA_1;
+}
+
+
+
+FileCallMenuAffirm
+FileCallMenuAffirm_getFromBuffer(FileCallMenuAffirm self, CS101_AppLayerParameters parameters,
+                                 uint8_t* msg, int msgSize, int startIndex, bool isSequence)
+{
+
+
+
+
+    return self;
+}
+
+void FileCallMenuAffirm_destroy(FileCallMenuAffirm self)
+{
+    GLOBAL_FREEMEM(self);
+}
+
+/*************************************************
+ * FileActivate : InformationObject 读文件激活
+ *************************************************/
+static bool
+FileActivate_encode(FileActivate self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+
+    Frame_setNextByte (frame, 2);//附加数据包类型 1-备用  2-文件传输  3-备用  4-备用
+
+//    uint8_t operateType;           //1字节:操作标识  3：读文件激活
+//    uint8_t fileNamelength;        //1字节：文件长度
+//    char* fileName;             //x字节：文件名
+
+    Frame_setNextByte (frame, self->operateType);
+
+    Frame_setNextByte (frame, self->fileNamelength);
+
+    //Frame_appendBytes(frame, self->catalogueName, self->catalogueNamelength);
+    for(int i=0;i<self->fileNamelength;i++)
+    {
+       Frame_setNextByte (frame, (uint8_t)(self->fileName[i]));
+    }
+
+
+    return true;
+}
+
+struct sInformationObjectVFT FileActivateVFT = {
+        (EncodeFunction) FileActivate_encode,
+        (DestroyFunction) FileActivate_destroy
+};
+
+static void
+FileActivate_initialize(FileActivate self)
+{
+    self->virtualFunctionTable = &(FileActivateVFT);
+    self->type = F_FR_NA_1;
+}
+
+FileActivate FileActivate_create(FileActivate self, int ioa, uint8_t operateType, uint8_t fileNamelength, char* fileName)
+{
+    if (self == NULL)
+        self = (FileActivate) GLOBAL_MALLOC(sizeof(struct sFileActivate));
+
+    if (self != NULL) {
+        FileActivate_initialize(self);
+
+        self->objectAddress = ioa;
+        self->operateType = operateType;
+
+        self->fileNamelength = fileNamelength;
+        self->fileName = fileName;
+    }
+
+    return self;
+}
+
+void FileActivate_destroy(FileActivate self)
+{
+    GLOBAL_FREEMEM(self);
+}
+
+
+
+/*************************************************
+ * FileActivateAffirm : InformationObject 读文件激活确认
+ *************************************************/
+//FileActivateAffirm
+static bool
+FileActivateAffirm_encode(FileActivateAffirm self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+
+    Frame_setNextByte (frame, 2);//附加数据包类型 1-备用  2-文件传输  3-备用  4-备用
+
+    //uint8_t operateType;           //1字节:操作标识  1：读目录
+
+    Frame_setNextByte (frame, self->operateType);
+
+
+
+    return true;
+}
+
+struct sInformationObjectVFT FileActivateAffirmVFT = {
+        (EncodeFunction) FileActivateAffirm_encode,
+        (DestroyFunction) FileActivateAffirm_destroy
+};
+
+static void
+FileActivateAffirm_initialize(FileActivateAffirm self)
+{
+    self->virtualFunctionTable = &(FileActivateAffirmVFT);
+    self->type = F_FR_NA_1;
+}
+
+
+
+FileActivateAffirm
+FileActivateAffirm_getFromBuffer(FileActivateAffirm self, CS101_AppLayerParameters parameters,
+                                 uint8_t* msg, int msgSize, int startIndex, bool isSequence)
+{
+
+
+
+
+    return self;
+}
+
+void FileActivateAffirm_destroy(FileActivateAffirm self)
+{
+    GLOBAL_FREEMEM(self);
+}
+
+/*************************************************
+ * FileTransfer : InformationObject 读文件数据传输
+ *************************************************/
+//FileTransfer
+static bool
+FileTransfer_encode(FileTransfer self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+
+    Frame_setNextByte (frame, 2);//附加数据包类型 1-备用  2-文件传输  3-备用  4-备用
+
+    //uint8_t operateType;           //1字节:操作标识  1：读目录
+
+    Frame_setNextByte (frame, self->operateType);
+
+
+
+    return true;
+}
+
+struct sInformationObjectVFT FileTransferVFT = {
+        (EncodeFunction) FileTransfer_encode,
+        (DestroyFunction) FileTransfer_destroy
+};
+
+static void
+FileTransfer_initialize(FileTransfer self)
+{
+    self->virtualFunctionTable = &(FileTransferVFT);
+    self->type = F_FR_NA_1;
+}
+
+
+
+FileTransfer
+FileCallMenuAffirm_getFromBuffer(FileTransfer self, CS101_AppLayerParameters parameters,
+                                 uint8_t* msg, int msgSize, int startIndex, bool isSequence)
+{
+
+
+
+
+    return self;
+}
+
+void FileTransfer_destroy(FileTransfer self)
+{
+    GLOBAL_FREEMEM(self);
+}
+
+
+/*************************************************
+ * FileTransferAffirm : InformationObject 读文件数据传输确认
+ *************************************************/
+static bool
+FileTransferAffirm_encode(FileTransferAffirm self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+
+    Frame_setNextByte (frame, 2);//附加数据包类型 1-备用  2-文件传输  3-备用  4-备用
+
+//    uint8_t operateType;           //1字节:操作标识  6：读文件数据响应
+//    uint32_t fileID;               //4字节：文件ID
+//    uint32_t segmentnumber;        //4字节：数据段号,可以使用文件内容的偏移指针值
+//    uint8_t followupFlag;          //1字节:后续标志,0：无后续,1：有后续
+
+    Frame_setNextByte (frame, self->operateType);
+
+    Frame_setNextByte (frame, (uint8_t)(self->fileID % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x1000000) % 0x100));
+
+    Frame_setNextByte (frame, (uint8_t)(self->segmentnumber % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->segmentnumber / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->segmentnumber / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->segmentnumber / 0x1000000) % 0x100));
+
+    Frame_setNextByte (frame, self->followupFlag);
+
+
+
+    return true;
+}
+
+struct sInformationObjectVFT FileTransferAffirmVFT = {
+        (EncodeFunction) FileTransferAffirm_encode,
+        (DestroyFunction) FileTransferAffirm_destroy
+};
+
+static void
+FileTransferAffirm_initialize(FileTransferAffirm self)
+{
+    self->virtualFunctionTable = &(FileTransferAffirmVFT);
+    self->type = F_FR_NA_1;
+}
+
+FileTransferAffirm FileTransferAffirm_create(FileTransferAffirm self, int ioa, uint8_t operateType, uint32_t fileID, uint32_t segmentnumber, uint8_t followupFlag)
+{
+    if (self == NULL)
+        self = (FileTransferAffirm) GLOBAL_MALLOC(sizeof(struct sFileTransferAffirm));
+
+    if (self != NULL) {
+        FileTransferAffirm_initialize(self);
+
+        self->objectAddress = ioa;
+        self->operateType = operateType;
+
+        self->fileID = fileID;
+        self->segmentnumber = segmentnumber;
+        self->followupFlag = followupFlag;
+    }
+
+    return self;
+}
+
+void FileTransferAffirm_destroy(FileTransferAffirm self)
+{
+    GLOBAL_FREEMEM(self);
+}
+
+
+//========== <210>	：文件服务 ==========//

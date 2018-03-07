@@ -1089,17 +1089,17 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
 
         break;
 
-    case F_FR_NA_1: /* 120 - File ready */
+//    case F_FR_NA_1: /* 120 - File ready */
 
-        retVal = (InformationObject) FileReady_getFromBuffer(NULL, self->parameters, self->payload, self->payloadSize, 0);
+//        retVal = (InformationObject) FileReady_getFromBuffer(NULL, self->parameters, self->payload, self->payloadSize, 0);
 
-        break;
+//        break;
 
-    case F_SR_NA_1: /* 121 - Section ready */
+//    case F_SR_NA_1: /* 121 - Section ready */
 
-        retVal = (InformationObject) SectionReady_getFromBuffer(NULL, self->parameters, self->payload, self->payloadSize, 0);
+//        retVal = (InformationObject) SectionReady_getFromBuffer(NULL, self->parameters, self->payload, self->payloadSize, 0);
 
-        break;
+//        break;
 
     case F_SC_NA_1: /* 122 - Call/Select directory/file/section */
 
@@ -1140,6 +1140,43 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
                     self->payload, self->payloadSize, index * (self->parameters->sizeOfIOA + elementSize), false);
 
         break;
+
+
+//        M_FT_NA_1 = 42,//<42>∶＝故障事件信息
+//        C_SR_NA_1 = 200,//<200>：= 切换定值区
+//        C_RR_NA_1 = 201,//<201>：= 读定值区号
+//        C_RS_NA_1 = 202,//<202>：= 读参数和定值
+//        C_WS_NA_1 = 203,//<203>：= 写参数和定值
+//        M_IT_NB_1 = 206,//<206>∶＝累计量，短浮点数
+//        M_IT_TC_1 = 207,//<207>∶＝带 CP56Time2a 时标的累计量，短浮点数
+//        F_FR_NA_1 = 210,//<210>：= 文件传输
+//        F_SR_NA_1 = 211 //<211>：= 软件升级
+
+
+    case F_FR_NA_1: /* 210 - File service */
+
+        //根据不同的操作标识给与不同的响应
+        //2-目录召唤确认========提取目录
+        //4-文件激活确认
+        //5-读文件数据响应=======提取文件
+
+
+
+
+
+
+
+
+
+
+
+
+        break;
+
+
+
+
+
     }
 
     return retVal;
@@ -1327,11 +1364,11 @@ TypeID_toString(TypeID self)
     case P_AC_NA_1:
         return "P_AC_NA_1";
 
-    case F_FR_NA_1:
-        return "F_FR_NA_1";
+//    case F_FR_NA_1:
+//        return "F_FR_NA_1";
 
-    case F_SR_NA_1:
-        return "F_SR_NA_1";
+//    case F_SR_NA_1:
+//        return "F_SR_NA_1";
 
     case F_SC_NA_1:
         return "F_SC_NA_1";
@@ -1350,6 +1387,44 @@ TypeID_toString(TypeID self)
 
     case F_SC_NB_1:
         return "F_SC_NB_1";
+
+        //        M_FT_NA_1 = 42,//<42>∶＝故障事件信息
+        //        C_SR_NA_1 = 200,//<200>：= 切换定值区
+        //        C_RR_NA_1 = 201,//<201>：= 读定值区号
+        //        C_RS_NA_1 = 202,//<202>：= 读参数和定值
+        //        C_WS_NA_1 = 203,//<203>：= 写参数和定值
+        //        M_IT_NB_1 = 206,//<206>∶＝累计量，短浮点数
+        //        M_IT_TC_1 = 207,//<207>∶＝带 CP56Time2a 时标的累计量，短浮点数
+        //        F_FR_NA_1 = 210,//<210>：= 文件传输
+        //        F_SR_NA_1 = 211 //<211>：= 软件升级
+
+    case M_FT_NA_1:
+        return "M_FT_NA_1";
+
+    case C_SR_NA_1:
+        return "C_SR_NA_1";
+
+    case C_RR_NA_1:
+        return "C_RR_NA_1";
+
+    case C_RS_NA_1:
+        return "C_RS_NA_1";
+
+    case C_WS_NA_1:
+        return "C_WS_NA_1";
+
+    case M_IT_NB_1:
+        return "M_IT_NB_1";
+
+    case M_IT_TC_1:
+        return "M_IT_TC_1";
+
+    case F_FR_NA_1:
+        return "F_FR_NA_1";
+
+    case F_SR_NA_1:
+        return "F_SR_NA_1";
+
 
     default:
         return "unknown";

@@ -1790,6 +1790,46 @@ FileDirectory_getCreationTime(FileDirectory self);
 void
 FileDirectory_destroy(FileDirectory self);
 
+
+/*************************************************
+ * FileServer(selfdefine) : InformationObject
+ *************************************************/
+//========== <210>	：文件服务 ==========//
+typedef struct  sFileCallMenu* FileCallMenu;//文件目录召唤
+FileCallMenu FileCallMenu_create(FileCallMenu self, int ioa, uint8_t operateType, uint32_t catalogueID,
+                                 uint8_t catalogueNamelength, char* catalogueName, uint8_t callflag, CP56Time2a startTime, CP56Time2a endTime);
+void FileCallMenu_destroy(FileCallMenu self);
+
+typedef struct sFileCallMenuAffirm* FileCallMenuAffirm;
+//FileCallMenuAffirm FileCallMenuAffirm_create(FileCallMenuAffirm self);
+void FileCallMenuAffirm_destroy(FileCallMenuAffirm self);
+
+
+typedef struct  sFileActivate* FileActivate;//读文件激活
+FileActivate FileActivate_create(FileActivate self, int ioa, uint8_t operateType, uint8_t fileNamelength, char* fileName);
+void FileActivate_destroy(FileActivate self);
+
+
+typedef struct  sFileActivateAffirm* FileActivateAffirm;//读文件激活
+void FileActivateAffirm_destroy(FileActivateAffirm self);
+
+typedef struct  sFileTransfer* FileTransfer;//读文件数据传输确认
+void FileTransfer_destroy(FileTransfer self);
+
+typedef struct  sFileTransferAffirm* FileTransferAffirm;//读文件数据传输确认
+FileTransferAffirm FileTransferAffirm_create(FileTransferAffirm self, int ioa, uint8_t operateType, uint32_t fileID, uint32_t segmentnumber, uint8_t followupFlag);
+void FileTransferAffirm_destroy(FileTransferAffirm self);
+
+
+
+
+
+
+
+
+
+//========== <210>	：文件服务 ==========//
+
 /**
  * @}
  */

@@ -168,19 +168,19 @@ struct sCS104_APCIParameters {
  * \brief Message type IDs
  */
 typedef enum {
-    M_SP_NA_1 = 1,
+    M_SP_NA_1 = 1,//<1>∶＝单点信息
     M_SP_TA_1 = 2,
-    M_DP_NA_1 = 3,
+    M_DP_NA_1 = 3,//<3>∶＝双点信息
     M_DP_TA_1 = 4,
     M_ST_NA_1 = 5,
     M_ST_TA_1 = 6,
     M_BO_NA_1 = 7,
     M_BO_TA_1 = 8,
-    M_ME_NA_1 = 9,
+    M_ME_NA_1 = 9,//<9>∶＝测量值，归一化值
     M_ME_TA_1 = 10,
-    M_ME_NB_1 = 11,
+    M_ME_NB_1 = 11,//<11>∶＝测量值，标度化值
     M_ME_TB_1 = 12,
-    M_ME_NC_1 = 13,
+    M_ME_NC_1 = 13,//<13>∶＝测量值，短浮点数
     M_ME_TC_1 = 14,
     M_IT_NA_1 = 15,
     M_IT_TA_1 = 16,
@@ -189,8 +189,8 @@ typedef enum {
     M_EP_TC_1 = 19,
     M_PS_NA_1 = 20,
     M_ME_ND_1 = 21,
-    M_SP_TB_1 = 30,
-    M_DP_TB_1 = 31,
+    M_SP_TB_1 = 30,//<30>∶＝带 CP56Time2a 时标的单点信息
+    M_DP_TB_1 = 31,//<31>∶＝带 CP56Time2a 时标的双点信息
     M_ST_TB_1 = 32,
     M_BO_TB_1 = 33,
     M_ME_TD_1 = 34,
@@ -200,8 +200,8 @@ typedef enum {
     M_EP_TD_1 = 38,
     M_EP_TE_1 = 39,
     M_EP_TF_1 = 40,
-    C_SC_NA_1 = 45,
-    C_DC_NA_1 = 46,
+    C_SC_NA_1 = 45,//<45>∶＝单点命令
+    C_DC_NA_1 = 46,//<46>∶＝双点命令
     C_RC_NA_1 = 47,
     C_SE_NA_1 = 48,
     C_SE_NB_1 = 49,
@@ -215,26 +215,36 @@ typedef enum {
     C_SE_TC_1 = 63,
     C_BO_TA_1 = 64,
     M_EI_NA_1 = 70,
-    C_IC_NA_1 = 100,
-    C_CI_NA_1 = 101,
+    C_IC_NA_1 = 100,//<100>∶＝站总召唤命令
+    C_CI_NA_1 = 101,//
     C_RD_NA_1 = 102,
-    C_CS_NA_1 = 103,
-    C_TS_NA_1 = 104,
-    C_RP_NA_1 = 105,
+    C_CS_NA_1 = 103,//<103>∶＝时钟同步命令
+    C_TS_NA_1 = 104,//<104>∶＝测试命令
+    C_RP_NA_1 = 105,//<105>∶＝复位进程命令
     C_CD_NA_1 = 106,
     C_TS_TA_1 = 107,
     P_ME_NA_1 = 110,
     P_ME_NB_1 = 111,
     P_ME_NC_1 = 112,
     P_AC_NA_1 = 113,
-    F_FR_NA_1 = 120,
-    F_SR_NA_1 = 121,
-    F_SC_NA_1 = 122,
-    F_LS_NA_1 = 123,
-    F_AF_NA_1 = 124,
-    F_SG_NA_1 = 125,
-    F_DR_TA_1 = 126,
-    F_SC_NB_1 = 127
+//    F_FR_NA_1 = 120,
+//    F_SR_NA_1 = 121,
+    F_SC_NA_1 = 122,//召唤目录（可选），选择文件（可选），召唤文件，召唤节
+    F_LS_NA_1 = 123,//最后的节，最后的段
+    F_AF_NA_1 = 124,//认可文件，认可节
+    F_SG_NA_1 = 125,//段
+    F_DR_TA_1 = 126,//目录
+    F_SC_NB_1 = 127,
+
+    M_FT_NA_1 = 42,//<42>∶＝故障事件信息
+    C_SR_NA_1 = 200,//<200>：= 切换定值区
+    C_RR_NA_1 = 201,//<201>：= 读定值区号
+    C_RS_NA_1 = 202,//<202>：= 读参数和定值
+    C_WS_NA_1 = 203,//<203>：= 写参数和定值
+    M_IT_NB_1 = 206,//<206>∶＝累计量，短浮点数
+    M_IT_TC_1 = 207,//<207>∶＝带 CP56Time2a 时标的累计量，短浮点数
+    F_FR_NA_1 = 210,//<210>：= 文件传输
+    F_SR_NA_1 = 211 //<211>：= 软件升级
 } IEC60870_5_TypeID;
 
 typedef IEC60870_5_TypeID TypeID;

@@ -11,6 +11,9 @@
 #include "../api/cs101_information_objects.h"
 #include "frame.h"
 
+#define MAX_MENUNUM 64
+#define MAX_FILENUM 64
+
 typedef struct sInformationObjectVFT* InformationObjectVFT;
 
 bool
@@ -285,6 +288,25 @@ FileDirectory
 FileDirectory_getFromBuffer(FileDirectory self, CS101_AppLayerParameters parameters,
         uint8_t* msg, int msgSize, int startIndex, bool isSequence);
 
+//文件服务===新增
+FileCallMenu
+FileCallMenu_getFromBuffer(FileCallMenu self, CS101_AppLayerParameters parameters,
+        uint8_t* msg, int msgSize, int startIndex, bool isSequence);
+
+//FileCallMenuAffirm
+FileCallMenuAffirm
+FileCallMenuAffirm_getFromBuffer(FileCallMenuAffirm self, CS101_AppLayerParameters parameters,
+                                 uint8_t* msg, int msgSize, int startIndex, bool isSequence);
+
+//FileActivateAffirm
+FileActivateAffirm
+FileActivateAffirm_getFromBuffer(FileActivateAffirm self, CS101_AppLayerParameters parameters,
+                                 uint8_t* msg, int msgSize, int startIndex, bool isSequence);
+
+//FileTransfer
+FileTransfer
+FileCallMenuAffirm_getFromBuffer(FileTransfer self, CS101_AppLayerParameters parameters,
+                                 uint8_t* msg, int msgSize, int startIndex, bool isSequence);
 
 /********************************************
  * static InformationObject type definitions
@@ -1014,7 +1036,7 @@ struct sEndOfInitialization {
     uint8_t coi;
 };
 
-struct sFileReady {
+struct sFileReady {//<120>	：=文件准备就绪
 
     int objectAddress;
 
@@ -1029,7 +1051,7 @@ struct sFileReady {
     uint8_t frq; /* file ready qualifier */
 };
 
-struct sSectionReady {
+struct sSectionReady {//<121>	：=节准备就绪
 
     int objectAddress;
 
@@ -1046,7 +1068,7 @@ struct sSectionReady {
     uint8_t srq; /* section ready qualifier */
 };
 
-struct sFileCallOrSelect {
+struct sFileCallOrSelect {//<122>	：=召唤目录（可选），选择文件（可选），召唤文件，召唤节
 
     int objectAddress;
 
@@ -1061,7 +1083,7 @@ struct sFileCallOrSelect {
     uint8_t scq; /* select and call qualifier */
 };
 
-struct sFileLastSegmentOrSection {
+struct sFileLastSegmentOrSection {//<123>	：=最后的节，最后的段
 
     int objectAddress;
 
@@ -1078,7 +1100,7 @@ struct sFileLastSegmentOrSection {
     uint8_t chs; /* checksum of section or segment */
 };
 
-struct sFileACK {
+struct sFileACK {//<124>	：=认可文件，认可节
 
     int objectAddress;
 
@@ -1093,7 +1115,7 @@ struct sFileACK {
     uint8_t afq; /* AFQ (acknowledge file or section qualifier) */
 };
 
-struct sFileSegment {
+struct sFileSegment {//<125>	：=段
 
     int objectAddress;
 
@@ -1110,7 +1132,7 @@ struct sFileSegment {
     uint8_t* data; /* user data buffer - file payload */
 };
 
-struct sFileDirectory {
+struct sFileDirectory {//<126>	：=目录
 
     int objectAddress;
 
@@ -1126,6 +1148,120 @@ struct sFileDirectory {
 
     struct sCP56Time2a creationTime;
 };
+
+//========== <210>	：文件服务 ==========//
+struct sFileCallMenu{//文件目录召唤
+
+    int objectAddress;
+
+    TypeID type;
+
+    InformationObjectVFT virtualFunctionTable;
+
+    uint8_t operateType;           //1字节:操作标识  1：读目录
+    uint32_t catalogueID;          //4字节：目录ID
+    uint8_t catalogueNamelength;   //1字节：目录名长度
+    char* catalogueName;           //x字节：目录名
+    uint8_t callflag;              //1字节：召唤标志(0：目录下所有文件；1：目录下满足搜索时间段的文件)
+    struct sCP56Time2a startTime;  //7字节：查询起始时间
+    struct sCP56Time2a endTime;    //7字节：查询终止时间
+};
+
+struct sFileActivate{//读文件激活
+
+    int objectAddress;
+
+    TypeID type;
+
+    InformationObjectVFT virtualFunctionTable;
+
+    uint8_t operateType;           //1字节:操作标识  3：读文件激活
+    uint8_t fileNamelength;        //1字节：文件长度
+    char* fileName;             //x字节：文件名
+};
+
+struct sFileTransferAffirm{//读文件传输确认
+
+    int objectAddress;
+
+    TypeID type;
+
+    InformationObjectVFT virtualFunctionTable;
+
+    uint8_t operateType;           //1字节:操作标识  6：读文件数据响应
+    uint32_t fileID;               //4字节：文件ID
+    uint32_t segmentnumber;        //4字节：数据段号,可以使用文件内容的偏移指针值
+    uint8_t followupFlag;          //1字节:后续标志,0：无后续,1：有后续
+
+};
+
+struct sMenu{//目录
+    uint8_t fileNamelength;        //1字节：文件长度
+    char* fileName;                //x字节：文件名
+    uint8_t fileProperty;          //1字节：文件属性
+    uint32_t fileSize;             //4字节：文件大小
+    struct sCP56Time2a fileTime;   //7字节：文件时间
+
+};
+
+
+//affirm ==== 确认回复
+struct sFileCallMenuAffirm{//目录召唤确认
+
+    int objectAddress;
+
+    TypeID type;
+
+    InformationObjectVFT virtualFunctionTable;
+
+    uint8_t operateType;           //1字节:操作标识  2：读目录(目录召唤确认)
+    uint8_t resultDescribe;        //1字节:结果描述字 0-成功 1-失败
+    uint32_t catalogueID;          //4字节：目录ID
+    uint8_t followupFlag;          //1字节:后续标志,0：无后续,1：有后续
+    uint8_t file_num;              //1字节：本帧文件数量(通常1帧数据5个目录名称)
+
+    //struct MENU sMenu[MAX_MENUNUM];//文件1 ... 文件n
+};
+
+struct sFileActivateAffirm{//读文件激活确认
+
+    int objectAddress;
+
+    TypeID type;
+
+    InformationObjectVFT virtualFunctionTable;
+
+    uint8_t operateType;           //1字节:操作标识  4：读文件激活确认
+    uint8_t resultDescribe;        //1字节:结果描述字 0-成功 1-失败
+    uint8_t fileNamelength;        //1字节：文件长度
+    char* fileName;             //x字节：文件名
+    uint32_t fileID;               //4字节：文件ID
+    uint32_t fileSize;             //4字节：文件大小
+
+};
+
+struct sFile{//文件
+
+};
+
+struct sFileTransfer{//读文件传输
+
+    int objectAddress;
+
+    TypeID type;
+
+    InformationObjectVFT virtualFunctionTable;
+
+    uint8_t operateType;           //1字节:操作标识  5：读文件数据
+    uint32_t fileID;               //4字节：文件ID
+    uint32_t segmentnumber;        //4字节：数据段号,可以使用文件内容的偏移指针值
+    uint8_t followupFlag;          //1字节:后续标志,0：无后续,1：有后续
+    char* fileData;                //x字节：文件数据
+    uint8_t fileCheckSum;          //1字节:校验码(校验范围：文件数据 校验算法：单字节模和运算)
+};
+
+
+//========== <210>	：文件服务 ==========//
 
 
 union uInformationObject {

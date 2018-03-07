@@ -873,6 +873,18 @@ sendASDUInternal(CS104_Connection self, Frame frame)
     return retVal;
 }
 
+//站总召唤   C_CI_NA_1=100
+/*
+68H              1 字节
+报文长度 L         1 字节
+控制域 C          4 字节
+类型标识符 TI      1 字节
+可变帧长限定词 VSQ  1 字节
+传送原因 COT       2 字节
+ASDU 公共地址      2 字节
+信息对象地址（=0）   3 字节
+召唤限定词 QOI     1 字节
+*/
 bool
 CS104_Connection_sendInterrogationCommand(CS104_Connection self, CS101_CauseOfTransmission cot, int ca, QualifierOfInterrogation qoi)
 {
@@ -883,11 +895,12 @@ CS104_Connection_sendInterrogationCommand(CS104_Connection self, CS101_CauseOfTr
     encodeIOA(self, frame, 0);
 
     /* encode QOI (7.2.6.22) */
-    T104Frame_setNextByte(frame, qoi); /* 20 = station interrogation */
+    T104Frame_setNextByte(frame, qoi); /* 20 = station interrogation *///召唤限定词 QOI:<20>  总召唤
 
     return sendASDUInternal(self, frame);
 }
 
+//<101>∶＝电能量召唤命令   C_CI_NA_1=101
 bool
 CS104_Connection_sendCounterInterrogationCommand(CS104_Connection self, CS101_CauseOfTransmission cot, int ca, uint8_t qcc)
 {
@@ -903,6 +916,7 @@ CS104_Connection_sendCounterInterrogationCommand(CS104_Connection self, CS101_Ca
     return sendASDUInternal(self, frame);
 }
 
+//   C_RD_NA_1=102
 bool
 CS104_Connection_sendReadCommand(CS104_Connection self, int ca, int ioa)
 {
@@ -915,6 +929,18 @@ CS104_Connection_sendReadCommand(CS104_Connection self, int ca, int ioa)
     return sendASDUInternal(self, frame);
 }
 
+//时钟命令  C_CS_NA_1=103
+/*
+68H  1 字节
+报文长度 L  1 字节
+控制域 C  4 字节
+类型标识符 TI  1 字节
+可变帧长限定词 VSQ  1 字节
+传送原因 COT  2 字节
+ASDU 公共地址  2 字节
+信息对象地址（=0）  3 字节
+时标 CP56Time2a  7 字节
+ */
 bool
 CS104_Connection_sendClockSyncCommand(CS104_Connection self, int ca, CP56Time2a time)
 {
@@ -928,6 +954,8 @@ CS104_Connection_sendClockSyncCommand(CS104_Connection self, int ca, CP56Time2a 
 
     return sendASDUInternal(self, frame);
 }
+
+//测试命令   C_TS_NA_1=104
 
 bool
 CS104_Connection_sendTestCommand(CS104_Connection self, int ca)
@@ -944,6 +972,44 @@ CS104_Connection_sendTestCommand(CS104_Connection self, int ca)
     return sendASDUInternal(self, frame);
 }
 
+//复位进程命令  C_RP_NA_1 typeID: 105
+/*
+68H  1 字节
+报文长度 L  1 字节
+控制域 C  4 字节
+类型标识符 TI  1 字节
+可变帧长限定词 VSQ  1 字节
+传送原因 COT  2 字节
+ASDU 公共地址  2 字节
+信息对象地址（=0）  3 字节
+复位进程命令限定词 QRP  1 字节*/
+bool
+CS104_Connection_sendResetprocessCommand(CS104_Connection self, int ca, int qrp)
+{
+    Frame frame = (Frame) T104Frame_create();
+
+    encodeIdentificationField(self, frame, C_TS_NA_1, 1, CS101_COT_ACTIVATION, ca);
+
+    encodeIOA(self, frame, 0);
+
+    T104Frame_setNextByte(frame, qrp);
+
+    return sendASDUInternal(self, frame);
+}
+
+//控制命令   //<45>∶＝单点命令C_SC_NA_1,//<46>∶＝双点命令C_DC_NA_1
+/*
+ * 当信息对象序列（SQ=0）：
+68H  1 字节
+报文长度 L  1 字节
+控制域 C  4 字节
+类型标识符 TI  1 字节
+可变帧长限定词 VSQ  1 字节
+传输原因 COT  2 字节
+ASDU 公共地址  2 字节
+遥控信息对象地址  3 字节
+单命令 SCO/双命令 DCO  1 字节
+*/
 bool
 CS104_Connection_sendProcessCommand(CS104_Connection self, TypeID typeId, CS101_CauseOfTransmission cot, int ca, InformationObject sc)
 {
@@ -955,6 +1021,27 @@ CS104_Connection_sendProcessCommand(CS104_Connection self, TypeID typeId, CS101_
 
     return sendASDUInternal(self, frame);
 }
+
+//========== <210>	：文件服务 ==========//
+//Fileserving文件服务   F_FR_NA_1=210
+//===7.6.3.1 召唤文目录服务报文;7.6.3.2 读文件服务报文;7.6.3.3 写文件服务报文
+//文件目录召唤--->确认
+//读文件激活--->确认-->传输
+//读文件传输确认
+//
+//
+bool
+CS104_Connection_sendFileservingCommand(CS104_Connection self, CS101_CauseOfTransmission cot, int ca, InformationObject sc)
+{
+    Frame frame = (Frame) T104Frame_create();
+
+    encodeIdentificationField(self, frame, F_FR_NA_1, 1, cot, ca);
+
+    InformationObject_encode(sc, frame, (CS101_AppLayerParameters) &(self->alParameters), false);
+
+    return sendASDUInternal(self, frame);
+}
+//========== <210>	：文件服务 ==========//
 
 bool
 CS104_Connection_sendASDU(CS104_Connection self, CS101_ASDU asdu)
@@ -971,4 +1058,5 @@ CS104_Connection_isTransmitBufferFull(CS104_Connection self)
 {
     return isSentBufferFull(self);
 }
+
 
