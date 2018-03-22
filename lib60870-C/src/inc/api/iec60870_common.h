@@ -384,6 +384,16 @@ CS101_ASDU_isSequence(CS101_ASDU self);
 int
 CS101_ASDU_getNumberOfElements(CS101_ASDU self);
 
+int
+CS101_ASDU_getNumberOfElements_FaultEventYX(CS101_ASDU self);
+int
+CS101_ASDU_getTypeOfElements_FaultEventYX(CS101_ASDU self);
+int
+CS101_ASDU_getNumberOfElements_FaultEventYC(CS101_ASDU self);
+int
+CS101_ASDU_getTypeOfElements_FaultEventYC(CS101_ASDU self);
+int
+CS101_ASDU_getFileOperateType(CS101_ASDU self);
 /**
  * \brief Get the information object with the given index
  *

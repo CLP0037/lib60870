@@ -68,6 +68,11 @@ SinglePointWithCP56Time2a
 SinglePointWithCP56Time2a_getFromBuffer(SinglePointWithCP56Time2a self, CS101_AppLayerParameters parameters,
         uint8_t* msg, int msgSize, int startIndex, bool isSequence);
 
+//42故障事件
+FaultEventWithCP56Time2a
+FaultEventWithCP56Time2a_getFromBuffer(FaultEventWithCP56Time2a self, CS101_AppLayerParameters parameters,
+        uint8_t* msg, int msgSize, int startIndex, bool isSequence);
+
 BitString32
 BitString32_getFromBuffer(BitString32 self, CS101_AppLayerParameters parameters,
         uint8_t* msg, int msgSize, int startIndex, bool isSequence);
@@ -305,7 +310,7 @@ FileActivateAffirm_getFromBuffer(FileActivateAffirm self, CS101_AppLayerParamete
 
 //FileTransfer
 FileTransfer
-FileCallMenuAffirm_getFromBuffer(FileTransfer self, CS101_AppLayerParameters parameters,
+FileTransfer_getFromBuffer(FileTransfer self, CS101_AppLayerParameters parameters,
                                  uint8_t* msg, int msgSize, int startIndex, bool isSequence);
 
 /********************************************
@@ -426,6 +431,29 @@ struct sSinglePointWithCP56Time2a {
 
     bool value;
     QualityDescriptor quality;
+
+    struct sCP56Time2a timestamp;
+};
+
+//42==故障事件信息 FaultEventWithCP56Time2a
+struct sFaultEventWithCP56Time2a {
+    int objectAddress;
+
+    TypeID type;
+
+    InformationObjectVFT virtualFunctionTable;
+
+    bool isEncodeYXelseYC;
+    bool isEncodefirstframe;
+
+    int type_YX;
+    int num_YX;
+    bool value_YX;
+
+
+    int type_YC;
+    int num_YC;
+    float value_YC;
 
     struct sCP56Time2a timestamp;
 };
@@ -1197,7 +1225,8 @@ struct sFileTransferAffirm{//读文件传输确认
 
 struct sMenu{//目录
     uint8_t fileNamelength;        //1字节：文件长度
-    char* fileName;                //x字节：文件名
+    //uint8_t* fileName;//char* fileName;                //x字节：文件名
+    char fileName[256];
     uint8_t fileProperty;          //1字节：文件属性
     uint32_t fileSize;             //4字节：文件大小
     struct sCP56Time2a fileTime;   //7字节：文件时间
@@ -1220,7 +1249,7 @@ struct sFileCallMenuAffirm{//目录召唤确认
     uint8_t followupFlag;          //1字节:后续标志,0：无后续,1：有后续
     uint8_t file_num;              //1字节：本帧文件数量(通常1帧数据5个目录名称)
 
-    //struct MENU sMenu[MAX_MENUNUM];//文件1 ... 文件n
+    struct sMenu structMenu[MAX_MENUNUM];//文件1 ... 文件n[MAX_MENUNUM]
 };
 
 struct sFileActivateAffirm{//读文件激活确认

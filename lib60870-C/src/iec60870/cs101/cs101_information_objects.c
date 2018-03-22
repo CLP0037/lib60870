@@ -22,6 +22,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+//#include <QString>
+//#include <qcstring.h>
+//#include <QByteArray>
 
 #include "iec60870_common.h"
 #include "apl_types_internal.h"
@@ -212,7 +215,7 @@ InformationObject_getMaxSizeInMemory()
 }
 
 /**********************************************
- * SinglePointInformation
+ * SinglePointInformation  M_SP_NA_1=1  单点遥信
  **********************************************/
 
 static bool
@@ -314,7 +317,7 @@ SinglePointInformation_getQuality(SinglePointInformation self)
 
 
 /**********************************************
- * StepPositionInformation
+ * StepPositionInformation  M_ST_NA_1=5  步位置信息
  **********************************************/
 
 static bool
@@ -442,7 +445,7 @@ StepPositionInformation_getFromBuffer(StepPositionInformation self, CS101_AppLay
 
 
 /**********************************************
- * StepPositionWithCP56Time2a
+ * StepPositionWithCP56Time2a  M_ST_TB_1=32  带时标CP56Time2a的步位置信息
  **********************************************/
 
 static bool
@@ -553,7 +556,7 @@ StepPositionWithCP56Time2a_getFromBuffer(StepPositionWithCP56Time2a self, CS101_
 }
 
 /**********************************************
- * StepPositionWithCP24Time2a
+ * StepPositionWithCP24Time2a  M_ST_TA_1=6  带时标CP24Time2a的步位置信息
  **********************************************/
 
 static bool
@@ -665,7 +668,7 @@ StepPositionWithCP24Time2a_getFromBuffer(StepPositionWithCP24Time2a self, CS101_
 }
 
 /**********************************************
- * DoublePointInformation
+ * DoublePointInformation  M_DP_NA_1=3  双点遥信
  **********************************************/
 
 static bool
@@ -765,7 +768,7 @@ DoublePointInformation_getFromBuffer(DoublePointInformation self, CS101_AppLayer
 
 
 /*******************************************
- * DoublePointWithCP24Time2a
+ * DoublePointWithCP24Time2a  M_DP_TA_1=4  带时标CP24Time2a的双点遥信
  *******************************************/
 
 static bool
@@ -868,7 +871,7 @@ DoublePointWithCP24Time2a_getFromBuffer(DoublePointWithCP24Time2a self, CS101_Ap
 
 
 /*******************************************
- * DoublePointWithCP56Time2a
+ * DoublePointWithCP56Time2a  M_DP_TB_1=31 带时标CP56Time2a的双点遥信
  *******************************************/
 
 static bool
@@ -973,7 +976,7 @@ DoublePointWithCP56Time2a_getFromBuffer(DoublePointWithCP56Time2a self, CS101_Ap
 
 
 /*******************************************
- * SinglePointWithCP24Time2a
+ * SinglePointWithCP24Time2a  M_SP_TA_1=2  带时标CP24Time2a的单点遥信
  *******************************************/
 
 static bool
@@ -1077,7 +1080,7 @@ SinglePointWithCP24Time2a_getFromBuffer(SinglePointWithCP24Time2a self, CS101_Ap
 
 
 /*******************************************
- * SinglePointWithCP56Time2a
+ * SinglePointWithCP56Time2a  M_SP_TB_1=30  带时标CP56Time2a的单点遥信
  *******************************************/
 
 static bool
@@ -1180,10 +1183,227 @@ SinglePointWithCP56Time2a_getFromBuffer(SinglePointWithCP56Time2a self, CS101_Ap
     return self;
 }
 
+//新增42===故障事件
+/*******************************************
+ * FaultEventWithCP56Time2a  M_FT_NA_1=42  故障事件信息
+ *******************************************/
+static bool
+FaultEventWithCP56Time2a_encode(FaultEventWithCP56Time2a self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    if(self->isEncodeYXelseYC && (self->objectAddress >0 && self->objectAddress<0x4001))//状态量信息  1-4000
+    {
+        if(self->isEncodefirstframe)//首次组遥信包
+        {
+            self->isEncodefirstframe=false;
+            Frame_setNextByte(frame, self->num_YX);
+            Frame_setNextByte(frame, self->type_YX);
+        }
+        int size_yx = isSequence ? 8 : (parameters->sizeOfIOA + 8);
+        InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+        Frame_setNextByte(frame, self->value_YX);
+        /* timestamp */
+        Frame_appendBytes(frame, self->timestamp.encodedValue, 7);
+
+    }
+    else if(self->objectAddress >=0x4001 && self->objectAddress<0x6001)//模拟量信息  4001-6000
+    {
+        if(self->isEncodefirstframe)//首次组遥测包
+        {
+            self->isEncodefirstframe=false;
+            Frame_setNextByte(frame, self->num_YC);
+            Frame_setNextByte(frame, self->type_YC);
+        }
+
+        int size_yc = 0;
+        if(self->type_YC ==9||self->type_YC ==34)//归一化值
+        {
+            size_yc = isSequence ? 2 : (parameters->sizeOfIOA + 2);
+            InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+
+            int valueToEncode;
+
+            if (self->value_YC < 0)
+                valueToEncode = self->value_YC + 65536;
+            else
+                valueToEncode = self->value_YC;
+
+            //encodedValue[0] = (uint8_t) (valueToEncode % 256);
+            //encodedValue[1] = (uint8_t) (valueToEncode / 256);
+
+            Frame_setNextByte(frame, (uint8_t) (valueToEncode % 256));
+            Frame_setNextByte(frame, (uint8_t) (valueToEncode / 256));
+        }
+        else if(self->type_YC ==13||self->type_YC ==36)//浮点型
+        {
+            size_yc = isSequence ? 4 : (parameters->sizeOfIOA + 4);
+            InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+            uint8_t* valueBytes = (uint8_t*) &(self->value_YC);
+
+        #if (ORDER_LITTLE_ENDIAN == 1)
+            Frame_appendBytes(frame, valueBytes, 4);
+        #else
+            Frame_setNextByte(frame, valueBytes[3]);
+            Frame_setNextByte(frame, valueBytes[2]);
+            Frame_setNextByte(frame, valueBytes[1]);
+            Frame_setNextByte(frame, valueBytes[0]);
+        #endif
+        }
+
+        if(size_yc == 0)
+        {
+            //error log print
+            return false;
+        }
+
+
+    }
+    else
+    {
+        //error log print
+        return false;
+    }
+
+    return true;
+}
+
+
+struct sInformationObjectVFT FaultEventWithCP56Time2aVFT = {
+        (EncodeFunction) FaultEventWithCP56Time2a_encode,
+        (DestroyFunction) FaultEventWithCP56Time2a_destroy
+};
+
+static void
+FaultEventWithCP56Time2a_initialize(FaultEventWithCP56Time2a self)
+{
+    self->virtualFunctionTable = &(FaultEventWithCP56Time2aVFT);
+    self->type = M_FT_NA_1;
+}
+
+
+//FaultEventWithCP56Time2a
+//FaultEventWithCP56Time2a_create(FaultEventWithCP56Time2a self, int ioa, bool value_yx, float value_yc,
+//                                int type,int num,bool isEncodeYXelseYC,bool isEncodefirstframe,CP56Time2a timestamp)
+//{
+//    if (self == NULL)
+//        self = (FaultEventWithCP56Time2a) GLOBAL_CALLOC(1, sizeof(struct sFaultEventWithCP56Time2a));
+
+//    if (self != NULL) {
+//        FaultEventWithCP56Time2a_initialize(self);
+
+//        //self->objectAddress = ioa;
+
+//        if(isEncodeYXelseYC)
+//        {
+//            self->isEncodeYXelseYC = true;
+//            self->objectAddress = ioa;
+//            self->value_YX = value_yx;
+//            self->timestamp = *timestamp;
+//            if(isEncodefirstframe)
+//            {
+//                self->isEncodefirstframe = true;
+//                self->num_YX = num;
+//                self->type_YX = type;
+//            }
+//            else
+//            {
+//                //self->num_YX = 0;
+//                self->isEncodefirstframe = false;
+//            }
+//        }
+//        else
+//        {
+//            self->isEncodeYXelseYC = false;
+//            self->objectAddress = ioa;
+//            self->value_YC = value_yc;
+//            //self->timestamp_YC = *timestamp;
+//            if(isEncodefirstframe)
+//            {
+//                self->num_YC = num;
+//                self->type_YC = type;
+//            }
+//            else
+//            {
+//                //self->num_YC = 0;
+//                self->isEncodefirstframe = false;
+//            }
+//        }
+
+
+//        //self->quality = quality;
+
+
+//    }
+
+//    return self;
+//}
+
+void
+FaultEventWithCP56Time2a_destroy(FaultEventWithCP56Time2a self)
+{
+    GLOBAL_FREEMEM(self);
+}
+
+CP56Time2a
+FaultEventWithCP56Time2a_getTimestamp(FaultEventWithCP56Time2a self)
+{
+    return &(self->timestamp);
+}
+
+
+FaultEventWithCP56Time2a
+FaultEventWithCP56Time2a_getFromBuffer(FaultEventWithCP56Time2a self, CS101_AppLayerParameters parameters,
+        uint8_t* msg, int msgSize, int startIndex, bool isSequence)
+{
+    //TODO check message size
+
+    if (self == NULL)
+        self = (FaultEventWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sFaultEventWithCP56Time2a));
+
+    if (self != NULL) {
+        FaultEventWithCP56Time2a_initialize(self);
+
+        if (!isSequence) {
+            InformationObject_getFromBuffer((InformationObject) self, parameters, msg, startIndex);
+            startIndex += parameters->sizeOfIOA; /* skip IOA */
+        }
+
+        //YX
+        /* value */
+        uint8_t siq = msg [startIndex++];
+        self->value_YX = ((siq & 0x01) == 0x01);
+        /* timestamp */
+        CP56Time2a_getFromBuffer(&(self->timestamp), msg, msgSize, startIndex);
+
+        //YC
+        /* value(归一化值) */
+        self->value_YC = msg [startIndex++];//低位在前高位在后
+        self->value_YC += 256*msg [startIndex++];
+
+        /* value(浮点数) */
+        uint8_t* valueBytes = (uint8_t*) &(self->value_YC);
+
+#if (ORDER_LITTLE_ENDIAN == 1)
+        valueBytes[0] = msg [startIndex++];
+        valueBytes[1] = msg [startIndex++];
+        valueBytes[2] = msg [startIndex++];
+        valueBytes[3] = msg [startIndex++];
+#else
+        valueBytes[3] = msg [startIndex++];
+        valueBytes[2] = msg [startIndex++];
+        valueBytes[1] = msg [startIndex++];
+        valueBytes[0] = msg [startIndex++];
+#endif
+
+
+    }
+
+    return self;
+}
+
 
 
 /**********************************************
- * BitString32
+ * BitString32  M_BO_NA_1=7  32比特串
  **********************************************/
 
 static bool
@@ -1288,7 +1508,7 @@ BitString32_getFromBuffer(BitString32 self, CS101_AppLayerParameters parameters,
 }
 
 /**********************************************
- * Bitstring32WithCP24Time2a
+ * Bitstring32WithCP24Time2a  M_BO_TA_1=8 带时标CP24Time2a的32比特串
  **********************************************/
 
 static bool
@@ -1394,7 +1614,7 @@ Bitstring32WithCP24Time2a_getFromBuffer(Bitstring32WithCP24Time2a self, CS101_Ap
 }
 
 /**********************************************
- * Bitstring32WithCP56Time2a
+ * Bitstring32WithCP56Time2a  M_BO_TB_1=33  带时标CP56Time2a的32比特串
  **********************************************/
 
 static bool
@@ -1502,7 +1722,7 @@ Bitstring32WithCP56Time2a_getFromBuffer(Bitstring32WithCP56Time2a self, CS101_Ap
 
 
 /**********************************************
- * MeasuredValueNormalized
+ * MeasuredValueNormalized  M_ME_NA_1=9  测量值，归一化值
  **********************************************/
 
 static int
@@ -1644,7 +1864,7 @@ MeasuredValueNormalized_getFromBuffer(MeasuredValueNormalized self, CS101_AppLay
 }
 
 /**********************************************
- * ParameterNormalizedValue
+ * ParameterNormalizedValue  P_ME_NA_1=110  测量值参数，归一化值
  **********************************************/
 
 void
@@ -1696,7 +1916,7 @@ ParameterNormalizedValue_getFromBuffer(ParameterNormalizedValue self, CS101_AppL
 
 
 /*************************************************************
- * MeasuredValueNormalizedWithoutQuality : InformationObject
+ * MeasuredValueNormalizedWithoutQuality : InformationObject  M_ME_ND_1=21  不带品质描述的归一化值
  *************************************************************/
 
 static bool
@@ -1797,7 +2017,7 @@ MeasuredValueNormalizedWithoutQuality_getFromBuffer(MeasuredValueNormalizedWitho
 }
 
 /***********************************************************************
- * MeasuredValueNormalizedWithCP24Time2a : MeasuredValueNormalized
+ * MeasuredValueNormalizedWithCP24Time2a : MeasuredValueNormalized  M_ME_TA_1=10  带时标CP24Time2a的归一化值
  ***********************************************************************/
 
 static bool
@@ -1904,7 +2124,7 @@ MeasuredValueNormalizedWithCP24Time2a_getFromBuffer(MeasuredValueNormalizedWithC
 }
 
 /***********************************************************************
- * MeasuredValueNormalizedWithCP56Time2a : MeasuredValueNormalized
+ * MeasuredValueNormalizedWithCP56Time2a : MeasuredValueNormalized  M_ME_TD_1  带时标CP56Time2a的归一化值
  ***********************************************************************/
 
 static bool
@@ -2013,7 +2233,7 @@ MeasuredValueNormalizedWithCP56Time2a_getFromBuffer(MeasuredValueNormalizedWithC
 
 
 /*******************************************
- * MeasuredValueScaled
+ * MeasuredValueScaled  M_ME_NB_1=11  测量值，标度化值
  *******************************************/
 
 static bool
@@ -2112,7 +2332,7 @@ MeasuredValueScaled_getFromBuffer(MeasuredValueScaled self, CS101_AppLayerParame
 }
 
 /******************************************************
- * ParameterScaledValue : MeasuredValueScaled
+ * ParameterScaledValue : MeasuredValueScaled  P_ME_NB_1=111  测量值参数，标度化值
  *****************************************************/
 
 void
@@ -2164,7 +2384,7 @@ ParameterScaledValue_getFromBuffer(ParameterScaledValue self, CS101_AppLayerPara
 
 
 /*******************************************
- * MeasuredValueScaledWithCP24Time2a
+ * MeasuredValueScaledWithCP24Time2a  M_ME_TB_1=12  带时标CP24Time2a的标度化值
  *******************************************/
 
 static bool
@@ -2267,7 +2487,7 @@ MeasuredValueScaledWithCP24Time2a_getFromBuffer(MeasuredValueScaledWithCP24Time2
 }
 
 /*******************************************
- * MeasuredValueScaledWithCP56Time2a
+ * MeasuredValueScaledWithCP56Time2a  M_ME_TE_1=35  带时标CP56Time2a的标度化值
  *******************************************/
 
 static bool
@@ -2373,7 +2593,7 @@ MeasuredValueScaledWithCP56Time2a_getFromBuffer(MeasuredValueScaledWithCP56Time2
 }
 
 /*******************************************
- * MeasuredValueShort
+ * MeasuredValueShort  M_ME_NC_1=13 测量值，短浮点数
  *******************************************/
 
 static bool
@@ -2495,7 +2715,7 @@ MeasuredValueShort_getFromBuffer(MeasuredValueShort self, CS101_AppLayerParamete
 }
 
 /******************************************************
- * ParameterFloatValue : MeasuredValueShort
+ * ParameterFloatValue : MeasuredValueShort  P_ME_NC_1=112  测量值参数，短浮点数
  *****************************************************/
 
 void
@@ -2546,7 +2766,7 @@ ParameterFloatValue_getFromBuffer(ParameterFloatValue self, CS101_AppLayerParame
 }
 
 /*******************************************
- * MeasuredValueFloatWithCP24Time2a
+ * MeasuredValueFloatWithCP24Time2a  M_ME_TC_1=14  带时标CP24Time2a的短浮点数
  *******************************************/
 
 static bool
@@ -2660,7 +2880,7 @@ MeasuredValueShortWithCP24Time2a_getFromBuffer(MeasuredValueShortWithCP24Time2a 
 }
 
 /*******************************************
- * MeasuredValueFloatWithCP56Time2a
+ * MeasuredValueFloatWithCP56Time2a  M_ME_TF_1=36  带时标CP56Time2a的短浮点数
  *******************************************/
 
 static bool
@@ -2775,7 +2995,7 @@ MeasuredValueShortWithCP56Time2a_getFromBuffer(MeasuredValueShortWithCP56Time2a 
 
 
 /*******************************************
- * IntegratedTotals
+ * IntegratedTotals  M_IT_NA_1=15  累积量
  *******************************************/
 
 static bool
@@ -2871,7 +3091,7 @@ IntegratedTotals_getFromBuffer(IntegratedTotals self, CS101_AppLayerParameters p
 }
 
 /***********************************************************************
- * IntegratedTotalsWithCP24Time2a : IntegratedTotals
+ * IntegratedTotalsWithCP24Time2a : IntegratedTotals  M_IT_TA_1=16  带时标CP24Time2a的累积量
  ***********************************************************************/
 
 static bool
@@ -2975,7 +3195,7 @@ IntegratedTotalsWithCP24Time2a_getFromBuffer(IntegratedTotalsWithCP24Time2a self
 }
 
 /***********************************************************************
- * IntegratedTotalsWithCP56Time2a : IntegratedTotals
+ * IntegratedTotalsWithCP56Time2a : IntegratedTotals  M_IT_TB_1=37  M_IT_TA_1=16  带时标CP56Time2a的累积量
  ***********************************************************************/
 
 
@@ -3080,7 +3300,7 @@ IntegratedTotalsWithCP56Time2a_getFromBuffer(IntegratedTotalsWithCP56Time2a self
 
 
 /***********************************************************************
- * EventOfProtectionEquipment : InformationObject
+ * EventOfProtectionEquipment : InformationObject  M_EP_TA_1=17  继电保护装置事件
  ***********************************************************************/
 
 static bool
@@ -3192,7 +3412,7 @@ EventOfProtectionEquipment_getTimestamp(EventOfProtectionEquipment self)
 }
 
 /***********************************************************************
- * EventOfProtectionEquipmentWithCP56Time2a : InformationObject
+ * EventOfProtectionEquipmentWithCP56Time2a : InformationObject  M_EP_TD_1=38  带时标CP56Time2a的继电保护装置事件
  ***********************************************************************/
 
 static bool
@@ -3303,7 +3523,7 @@ EventOfProtectionEquipmentWithCP56Time2a_getFromBuffer(EventOfProtectionEquipmen
 }
 
 /***********************************************************************
- * PackedStartEventsOfProtectionEquipment : InformationObject
+ * PackedStartEventsOfProtectionEquipment : InformationObject  M_EP_TB_1=18  继电保护装置成组启动事件
  ***********************************************************************/
 
 static bool
@@ -3426,7 +3646,7 @@ PackedStartEventsOfProtectionEquipment_getFromBuffer(PackedStartEventsOfProtecti
 }
 
 /***************************************************************************
- * PackedStartEventsOfProtectionEquipmentWithCP56Time2a : InformationObject
+ * PackedStartEventsOfProtectionEquipmentWithCP56Time2a : InformationObject  M_EP_TE_1=39  带时标CP56Time2a的继电保护装置成组启动事件
  ***************************************************************************/
 
 static bool
@@ -3550,7 +3770,7 @@ PackedStartEventsOfProtectionEquipmentWithCP56Time2a_getFromBuffer(PackedStartEv
 
 
 /***********************************************************************
- * PacketOutputCircuitInfo : InformationObject
+ * PacketOutputCircuitInfo : InformationObject  M_EP_TC_1=19  继电保护装置成组输出电路信息
  ***********************************************************************/
 
 static bool
@@ -3673,7 +3893,7 @@ PackedOutputCircuitInfo_getFromBuffer(PackedOutputCircuitInfo self, CS101_AppLay
 }
 
 /***********************************************************************
- * PackedOutputCircuitInfoWithCP56Time2a : InformationObject
+ * PackedOutputCircuitInfoWithCP56Time2a : InformationObject  M_EP_TF_1=40  带时标CP56Time2a的继电保护装置成组输出电路信息
  ***********************************************************************/
 
 static bool
@@ -3797,7 +4017,7 @@ PackedOutputCircuitInfoWithCP56Time2a_getFromBuffer(PackedOutputCircuitInfoWithC
 
 
 /***********************************************************************
- * PackedSinglePointWithSCD : InformationObject
+ * PackedSinglePointWithSCD : InformationObject  M_PS_NA_1=20  带状态输出的成组单点信息
  ***********************************************************************/
 
 static bool
@@ -3899,7 +4119,7 @@ PackedSinglePointWithSCD_getFromBuffer(PackedSinglePointWithSCD self, CS101_AppL
 
 
 /*******************************************
- * SingleCommand
+ * SingleCommand  C_SC_NA_1=45  单命令
  *******************************************/
 
 static bool
@@ -4002,7 +4222,7 @@ SingleCommand_getFromBuffer(SingleCommand self, CS101_AppLayerParameters paramet
 
 
 /***********************************************************************
- * SingleCommandWithCP56Time2a : SingleCommand
+ * SingleCommandWithCP56Time2a : SingleCommand  C_SC_TA_1=58  带时标CP56Time2a的单命令
  ***********************************************************************/
 
 static bool
@@ -4098,7 +4318,7 @@ SingleCommandWithCP56Time2a_getFromBuffer(SingleCommandWithCP56Time2a self, CS10
 
 
 /*******************************************
- * DoubleCommand : InformationObject
+ * DoubleCommand : InformationObject  C_DC_NA_1=46  双命令
  *******************************************/
 
 static bool
@@ -4200,7 +4420,7 @@ DoubleCommand_getFromBuffer(DoubleCommand self, CS101_AppLayerParameters paramet
 }
 
 /**********************************************
- * DoubleCommandWithCP56Time2a : DoubleCommand
+ * DoubleCommandWithCP56Time2a : DoubleCommand  C_DC_TA_1=59  带时标CP56Time2a的双命令
  **********************************************/
 
 
@@ -4308,7 +4528,7 @@ DoubleCommandWithCP56Time2a_getFromBuffer(DoubleCommandWithCP56Time2a self, CS10
 }
 
 /*******************************************
- * StepCommand : InformationObject
+ * StepCommand : InformationObject  C_RC_NA_1=47  步调节命令
  *******************************************/
 
 static bool
@@ -4413,7 +4633,7 @@ StepCommand_getFromBuffer(StepCommand self, CS101_AppLayerParameters parameters,
 
 
 /*************************************************
- * StepCommandWithCP56Time2a : InformationObject
+ * StepCommandWithCP56Time2a : InformationObject  C_RC_TA_1=60  带时标CP56Time2a的步调节命令
  *************************************************/
 
 static bool
@@ -4521,7 +4741,7 @@ StepCommandWithCP56Time2a_getFromBuffer(StepCommandWithCP56Time2a self, CS101_Ap
 
 
 /*************************************************
- * SetpointCommandNormalized : InformationObject
+ * SetpointCommandNormalized : InformationObject  C_SE_NA_1=48  设点命令，归一化值
  ************************************************/
 
 static bool
@@ -4631,7 +4851,7 @@ SetpointCommandNormalized_getFromBuffer(SetpointCommandNormalized self, CS101_Ap
 }
 
 /**********************************************************************
- * SetpointCommandNormalizedWithCP56Time2a : SetpointCommandNormalized
+ * SetpointCommandNormalizedWithCP56Time2a : SetpointCommandNormalized  C_SE_TA_1=61  带时标CP56Time2a的设点命令，归一化值
  **********************************************************************/
 
 static bool
@@ -4744,7 +4964,7 @@ SetpointCommandNormalizedWithCP56Time2a_getFromBuffer(SetpointCommandNormalizedW
 
 
 /*************************************************
- * SetpointCommandScaled: InformationObject
+ * SetpointCommandScaled: InformationObject  C_SE_NB_1=49  设点命令，标度化值
  ************************************************/
 
 static bool
@@ -4850,7 +5070,7 @@ SetpointCommandScaled_getFromBuffer(SetpointCommandScaled self, CS101_AppLayerPa
 }
 
 /**********************************************************************
- * SetpointCommandScaledWithCP56Time2a : SetpointCommandScaled
+ * SetpointCommandScaledWithCP56Time2a : SetpointCommandScaled  C_SE_TB_1=62  带时标CP56Time2a的设点命令，标度化值
  **********************************************************************/
 
 static bool
@@ -4961,7 +5181,7 @@ SetpointCommandScaledWithCP56Time2a_getFromBuffer(SetpointCommandScaledWithCP56T
 
 
 /*************************************************
- * SetpointCommandShort: InformationObject
+ * SetpointCommandShort: InformationObject  C_SE_NC_1=50  设点命令，短浮点数
  ************************************************/
 
 static bool
@@ -5090,7 +5310,7 @@ SetpointCommandShort_getFromBuffer(SetpointCommandShort self, CS101_AppLayerPara
 
 
 /**********************************************************************
- * SetpointCommandShortWithCP56Time2a : SetpointCommandShort
+ * SetpointCommandShortWithCP56Time2a : SetpointCommandShort  C_SE_TC_1=63  带时标CP56Time2a的设点命令，短浮点数
  **********************************************************************/
 
 static bool
@@ -5212,7 +5432,7 @@ SetpointCommandShortWithCP56Time2a_getFromBuffer(SetpointCommandShortWithCP56Tim
 
 
 /*************************************************
- * Bitstring32Command : InformationObject
+ * Bitstring32Command : InformationObject  C_BO_NA_1=51  32比特串
  ************************************************/
 
 static bool
@@ -5317,7 +5537,7 @@ Bitstring32Command_getFromBuffer(Bitstring32Command self, CS101_AppLayerParamete
 
 
 /*******************************************************
- * Bitstring32CommandWithCP56Time2a: Bitstring32Command
+ * Bitstring32CommandWithCP56Time2a: Bitstring32Command  C_BO_TA_1=64  带时标CP56Time2a的32比特串
  *******************************************************/
 
 static bool
@@ -5424,7 +5644,7 @@ Bitstring32CommandWithCP56Time2a_getFromBuffer(Bitstring32CommandWithCP56Time2a 
 
 
 /*************************************************
- * ReadCommand : InformationObject
+ * ReadCommand : InformationObject  C_RD_NA_1=102  读命令
  ************************************************/
 
 static bool
@@ -5494,7 +5714,7 @@ ReadCommand_getFromBuffer(ReadCommand self, CS101_AppLayerParameters parameters,
 }
 
 /***************************************************
- * ClockSynchronizationCommand : InformationObject
+ * ClockSynchronizationCommand : InformationObject  C_CS_NA_1=103  时钟同步命令
  **************************************************/
 
 static bool
@@ -5577,7 +5797,7 @@ ClockSynchronizationCommand_getFromBuffer(ClockSynchronizationCommand self, CS10
 }
 
 /*************************************************
- * InterrogationCommand : InformationObject
+ * InterrogationCommand : InformationObject  C_IC_NA_1=100  总召唤命令
  ************************************************/
 
 static bool
@@ -5661,7 +5881,7 @@ InterrogationCommand_getFromBuffer(InterrogationCommand self, CS101_AppLayerPara
 }
 
 /**************************************************
- * CounterInterrogationCommand : InformationObject
+ * CounterInterrogationCommand : InformationObject  C_CI_NA_1=101  电能量脉冲命令
  **************************************************/
 
 static bool
@@ -5745,7 +5965,7 @@ CounterInterrogationCommand_getFromBuffer(CounterInterrogationCommand self, CS10
 }
 
 /*************************************************
- * TestCommand : InformationObject
+ * TestCommand : InformationObject  C_TS_NA_1=104  测试命令
  ************************************************/
 
 static bool
@@ -5835,7 +6055,7 @@ TestCommand_getFromBuffer(TestCommand self, CS101_AppLayerParameters parameters,
 }
 
 /*************************************************
- * ResetProcessCommand : InformationObject
+ * ResetProcessCommand : InformationObject  C_RP_NA_1=105  复位进程命令
  ************************************************/
 
 static bool
@@ -5919,7 +6139,7 @@ ResetProcessCommand_getFromBuffer(ResetProcessCommand self, CS101_AppLayerParame
 }
 
 /*************************************************
- * DelayAcquisitionCommand : InformationObject
+ * DelayAcquisitionCommand : InformationObject  C_CD_NA_1=106  延时获得命令
  ************************************************/
 
 static bool
@@ -6004,7 +6224,7 @@ DelayAcquisitionCommand_getFromBuffer(DelayAcquisitionCommand self, CS101_AppLay
 
 
 /*******************************************
- * ParameterActivation : InformationObject
+ * ParameterActivation : InformationObject  P_AC_NA_1=113  参数激活
  *******************************************/
 
 static bool
@@ -6088,7 +6308,7 @@ ParameterActivation_getFromBuffer(ParameterActivation self, CS101_AppLayerParame
 }
 
 /*******************************************
- * EndOfInitialization : InformationObject
+ * EndOfInitialization : InformationObject  M_EI_NA_1=70  初始化结束
  *******************************************/
 
 static bool
@@ -6172,7 +6392,7 @@ EndOfInitialization_getFromBuffer(EndOfInitialization self, CS101_AppLayerParame
 };
 
 /*******************************************
- * FileReady : InformationObject
+ * FileReady : InformationObject  F_FR_NA_1（原-120）
  *******************************************/
 
 static bool
@@ -6299,7 +6519,7 @@ FileReady_getFromBuffer(FileReady self, CS101_AppLayerParameters parameters,
 };
 
 /*******************************************
- * SectionReady : InformationObject
+ * SectionReady : InformationObject  F_SR_NA_1（原121）
  *******************************************/
 
 static bool
@@ -6439,7 +6659,7 @@ SectionReady_getFromBuffer(SectionReady self, CS101_AppLayerParameters parameter
 
 
 /*******************************************
- * FileCallOrSelect : InformationObject
+ * FileCallOrSelect : InformationObject  F_SC_NA_1=122
  *******************************************/
 
 static bool
@@ -6547,7 +6767,7 @@ FileCallOrSelect_getFromBuffer(FileCallOrSelect self, CS101_AppLayerParameters p
 };
 
 /*************************************************
- * FileLastSegmentOrSection : InformationObject
+ * FileLastSegmentOrSection : InformationObject  F_LS_NA_1=123
  *************************************************/
 
 static bool
@@ -6659,7 +6879,7 @@ FileLastSegmentOrSection_getFromBuffer(FileLastSegmentOrSection self, CS101_AppL
 };
 
 /*************************************************
- * FileACK : InformationObject
+ * FileACK : InformationObject  F_AF_NA_1=124
  *************************************************/
 
 static bool
@@ -6762,7 +6982,7 @@ FileACK_getFromBuffer(FileACK self, CS101_AppLayerParameters parameters,
 
 
 /*************************************************
- * FileSegment : InformationObject
+ * FileSegment : InformationObject  F_SG_NA_1=125
  *************************************************/
 
 static bool
@@ -6892,7 +7112,7 @@ FileSegment_getFromBuffer(FileSegment self, CS101_AppLayerParameters parameters,
 };
 
 /*************************************************
- * FileDirectory: InformationObject
+ * FileDirectory: InformationObject  F_DR_TA_1=126
  *************************************************/
 
 
@@ -7137,22 +7357,23 @@ FileCallMenu_getFromBuffer(FileCallMenu self, CS101_AppLayerParameters parameter
             startIndex += parameters->sizeOfIOA; /* skip IOA */
         }
 
-        self->operateType = msg[startIndex++];
 
+        self->operateType = msg[startIndex++];
+        //
         self->catalogueID = msg [startIndex++];
         self->catalogueID += (msg [startIndex++] * 0x100);
         self->catalogueID += (msg [startIndex++] * 0x10000);
         self->catalogueID += (msg [startIndex++] * 0x1000000);
-
+        //
         self->catalogueNamelength = msg[startIndex++];
-
+        //
         for(int i=0;i<self->catalogueNamelength;i++)
         {
             self->catalogueName[i]=msg[startIndex++];
         }
-
+        //
         self->callflag = msg[startIndex++];
-
+        //
         CP56Time2a_getFromBuffer(&(self->startTime), msg, msgSize, startIndex);
         CP56Time2a_getFromBuffer(&(self->endTime), msg, msgSize, startIndex);
     }
@@ -7207,7 +7428,14 @@ FileCallMenuAffirm_encode(FileCallMenuAffirm self, Frame frame, CS101_AppLayerPa
 
     for(int i=0;i<self->file_num;i++)//目录数据组包
     {
-
+        Frame_setNextByte (frame, self->structMenu[i].fileNamelength);
+        Frame_appendBytes(frame, (uint8_t*)(&(self->structMenu[i].fileName)), self->structMenu[i].fileNamelength);
+        Frame_setNextByte (frame, self->structMenu[i].fileProperty);
+        Frame_setNextByte (frame, (uint8_t)(self->structMenu[i].fileSize % 0x100));
+        Frame_setNextByte (frame, (uint8_t)((self->structMenu[i].fileSize / 0x100) % 0x100));
+        Frame_setNextByte (frame, (uint8_t)((self->structMenu[i].fileSize / 0x10000) % 0x100));
+        Frame_setNextByte (frame, (uint8_t)((self->structMenu[i].fileSize / 0x1000000) % 0x100));
+        Frame_appendBytes(frame, self->structMenu[i].fileTime.encodedValue, 7);
     }
 
     return true;
@@ -7231,16 +7459,146 @@ FileCallMenuAffirm
 FileCallMenuAffirm_getFromBuffer(FileCallMenuAffirm self, CS101_AppLayerParameters parameters,
                                  uint8_t* msg, int msgSize, int startIndex, bool isSequence)
 {
+    if (self == NULL)
+       self = (FileCallMenuAffirm) GLOBAL_MALLOC(sizeof(struct sFileCallMenuAffirm));
+
+    if (self != NULL) {
+
+        FileCallMenuAffirm_initialize(self);
+
+        if (!isSequence) {
+            InformationObject_getFromBuffer((InformationObject) self, parameters, msg, startIndex);
+
+            startIndex += parameters->sizeOfIOA; /* skip IOA */
+        }
+        startIndex++;//附加数据包类型 2：文件传输；
+        //操作标识   2：读目录确认
+        self->operateType = msg[startIndex++];
+        //结果描述字
+        self->resultDescribe = msg[startIndex++];
+        //目录 ID
+        self->catalogueID = msg [startIndex++];
+        self->catalogueID += (msg [startIndex++] * 0x100);
+        self->catalogueID += (msg [startIndex++] * 0x10000);
+        self->catalogueID += (msg [startIndex++] * 0x1000000);
+        //后续标志  0：无后续,1：有后续
+        self->followupFlag = msg [startIndex++];
+        //本帧文件数量
+        self->file_num = msg [startIndex++];
+
+        for(int i=0;i<self->file_num;i++)//目录数据
+        {
+
+            //文件 i 名称长度
+            self->structMenu[i].fileNamelength = msg [startIndex++];
+            //文件 i 名称
+            //self->structMenu[i].fileName={0};//先清空
+            //memset(&(self->structMenu[i].fileName),0,256);
+            //self->structMenu[i].fileName[0]='\0';
+
+//            for(int len=0;len<self->structMenu[i].fileNamelength;len++)
+//            {
+//                self->structMenu[i].fileName[len]=msg [startIndex++];
+//            }
+            for(int len=0;len<256;len++)
+            {
+                if(len<self->structMenu[i].fileNamelength)
+                    self->structMenu[i].fileName[len]=msg [startIndex++];
+                else
+                    self->structMenu[i].fileName[len]='\0';
+            }
 
 
+            //文件 i 属性
+            self->structMenu[i].fileProperty=msg [startIndex++];
+            //文件 i 大小
+            self->structMenu[i].fileSize = msg [startIndex++];
+            self->structMenu[i].fileSize += (msg [startIndex++] * 0x100);
+            self->structMenu[i].fileSize += (msg [startIndex++] * 0x10000);
+            self->structMenu[i].fileSize += (msg [startIndex++] * 0x1000000);
+            //文件 i 时间
+            CP56Time2a_getFromBuffer(&(self->structMenu[i].fileTime), msg, msgSize, startIndex);
+            startIndex +=7;
+        }
 
+    }
 
     return self;
 }
 
+
+int
+FileCallMenuAffirm_getOperateType(FileCallMenuAffirm self)
+{
+    return self->operateType;
+}
+
+
+int
+FileCallMenuAffirm_getResultDescribe(FileCallMenuAffirm self)
+{
+    return self->resultDescribe;
+}
+
+//catalogueID
+int
+FileCallMenuAffirm_getCatalogueID(FileCallMenuAffirm self)
+{
+    return self->catalogueID;
+}
+
+int
+FileCallMenuAffirm_getFilenum(FileCallMenuAffirm self)
+{
+    return self->file_num;
+}
+
+int
+FileCallMenuAffirm_getFollowupFlag(FileCallMenuAffirm self)
+{
+    return self->followupFlag;
+}
+
+int
+FileCallMenuAffirm_getFilenamelen(FileCallMenuAffirm self,int index)
+{
+    return self->structMenu[index].fileNamelength;
+}
+
+//fileProperty
+int
+FileCallMenuAffirm_getFileProperty(FileCallMenuAffirm self,int index)
+{
+    return self->structMenu[index].fileProperty;
+}
+
+//fileSize
+int
+FileCallMenuAffirm_getFileSize(FileCallMenuAffirm self,int index)
+{
+    return self->structMenu[index].fileSize;
+}
+
+//fileTime
+CP56Time2a
+FileCallMenuAffirm_getFileTime(FileCallMenuAffirm self,int index)
+{
+    return &(self->structMenu[index].fileTime);
+}
+
+char* FileCallMenuAffirm_getFilename(FileCallMenuAffirm self,int index)
+{
+    if(index >= self->file_num)
+        return NULL;
+
+    return (char*)(self->structMenu[index].fileName);
+}
+
+
 void FileCallMenuAffirm_destroy(FileCallMenuAffirm self)
 {
-    GLOBAL_FREEMEM(self);
+    if (self != NULL)
+        GLOBAL_FREEMEM(self);
 }
 
 /*************************************************
@@ -7393,7 +7751,7 @@ FileTransfer_initialize(FileTransfer self)
 
 
 FileTransfer
-FileCallMenuAffirm_getFromBuffer(FileTransfer self, CS101_AppLayerParameters parameters,
+FileTransfer_getFromBuffer(FileTransfer self, CS101_AppLayerParameters parameters,
                                  uint8_t* msg, int msgSize, int startIndex, bool isSequence)
 {
 

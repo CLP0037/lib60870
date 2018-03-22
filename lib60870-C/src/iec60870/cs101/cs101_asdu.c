@@ -161,6 +161,7 @@ CS101_ASDU_encode(CS101_ASDU self, Frame frame)
 CS101_ASDU
 CS101_ASDU_createFromBuffer(CS101_AppLayerParameters parameters, uint8_t* msg, int msgLength)
 {
+    //(类型标识符 TI+类型标识符 TI)+(传送原因 COT)+(ASDU 公共地址)
     int asduHeaderLength = 2 + parameters->sizeOfCOT + parameters->sizeOfCA;
 
     if (msgLength < asduHeaderLength)
@@ -364,6 +365,38 @@ CS101_ASDU_getNumberOfElements(CS101_ASDU self)
 {
     return (self->asdu[1] & 0x7f);
 }
+
+//
+int
+CS101_ASDU_getNumberOfElements_FaultEventYX(CS101_ASDU self)
+{
+    //return (self->asdu[1] & 0x7f);
+    return (int)(self->asdu[6]);
+}
+int
+CS101_ASDU_getTypeOfElements_FaultEventYX(CS101_ASDU self)
+{
+    return (int)(self->asdu[7]);
+}
+
+int
+CS101_ASDU_getNumberOfElements_FaultEventYC(CS101_ASDU self)
+{
+    return (int)(self->asdu[6+2+(10*self->asdu[6])]);
+}
+int
+CS101_ASDU_getTypeOfElements_FaultEventYC(CS101_ASDU self)
+{
+    return (int)(self->asdu[7+2+(10*self->asdu[6])]);
+}
+
+int
+CS101_ASDU_getFileOperateType(CS101_ASDU self)//文件操作标识
+{
+    return (int)(self->asdu[9]);
+}
+
+//
 
 InformationObject
 CS101_ASDU_getElement(CS101_ASDU self, int index)
@@ -890,6 +923,31 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
         break;
 
     /* 41 - 44 reserved */
+    case  M_FT_NA_1: /* 42 <42>∶＝故障事件信息*/
+        if(index < CS101_ASDU_getNumberOfElements_FaultEventYX(self))
+        {
+            //遥信类型（1字节）+遥信个数（1字节）+遥信数据（点号+值+时标）
+            elementSize = 8;
+            retVal  = (InformationObject) FaultEventWithCP56Time2a_getFromBuffer(NULL, self->parameters,
+                  self->payload, self->payloadSize, 2+index * (2 + elementSize), false);//self->parameters->sizeOfIOA
+        }
+        else //if(index >= CS101_ASDU_getNumberOfElements_FaultEventYX(self))
+        {
+            //YC遥测值 2（归一化值） 或 4（浮点值）
+            if(CS101_ASDU_getNumberOfElements_FaultEventYC(self)==13)//浮点数
+            {
+                elementSize = 4;
+            }
+            else//归一化
+            {
+                elementSize = 2;
+            }
+            int index_yc=2+CS101_ASDU_getNumberOfElements_FaultEventYX(self)*(self->parameters->sizeOfIOA+8)
+                    +2+(index-CS101_ASDU_getNumberOfElements_FaultEventYX(self))*(self->parameters->sizeOfIOA + elementSize);
+            retVal  = (InformationObject) FaultEventWithCP56Time2a_getFromBuffer(NULL, self->parameters,self->payload, self->payloadSize,index_yc, false);
+        }
+        break;
+    /* 41 - 44 reserved */
 
     case C_SC_NA_1: /* 45 */
 
@@ -1161,9 +1219,28 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
         //5-读文件数据响应=======提取文件
 
 
+        int operateType = CS101_ASDU_getFileOperateType(self);//self->asdu[9];
 
+        switch(operateType)
+        {
+            case 2://目录召唤确认
+                //2 FileCallMenuAffirm_getFromBuffer
+                retVal  = (InformationObject) FileCallMenuAffirm_getFromBuffer(NULL, self->parameters,
+                    self->payload, self->payloadSize, 0, false);
+            break;
 
+            case 4://读文件激活确认
+                //4 FileActivateAffirm
+                retVal  = (InformationObject) FileActivateAffirm_getFromBuffer(NULL, self->parameters,
+                    self->payload, self->payloadSize, 0, false);
+            break;
 
+            case 5://读文件数据传输
+                //5 FileTransfer
+                retVal  = (InformationObject) FileTransfer_getFromBuffer(NULL, self->parameters,
+                    self->payload, self->payloadSize, 0, false);
+            break;
+        }
 
 
 

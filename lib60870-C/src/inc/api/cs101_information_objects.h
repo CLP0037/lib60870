@@ -348,6 +348,23 @@ SinglePointWithCP56Time2a_destroy(SinglePointWithCP56Time2a self);
 CP56Time2a
 SinglePointWithCP56Time2a_getTimestamp(SinglePointWithCP56Time2a self);
 
+//42==故障事件信息 FaultEventWithCP56Time2a
+/********************************************************
+ *  FaultEventWithCP56Time2a (:SinglePointInformation + YCvalue)
+ ********************************************************/
+
+typedef struct sFaultEventWithCP56Time2a* FaultEventWithCP56Time2a;
+
+//FaultEventWithCP56Time2a
+//FaultEventWithCP56Time2a_create(FaultEventWithCP56Time2a self, int ioa, bool value_yx, float value_yc,
+//                                int type,int num,bool isEncodeYXelseYC,bool isEncodefirstframe,CP56Time2a timestamp);
+
+void
+FaultEventWithCP56Time2a_destroy(FaultEventWithCP56Time2a self);
+
+CP56Time2a
+FaultEventWithCP56Time2a_getTimestamp(FaultEventWithCP56Time2a self);
+
 
 /************************************************
  * DoublePointInformation (:InformationObject)
@@ -1803,6 +1820,16 @@ void FileCallMenu_destroy(FileCallMenu self);
 typedef struct sFileCallMenuAffirm* FileCallMenuAffirm;
 //FileCallMenuAffirm FileCallMenuAffirm_create(FileCallMenuAffirm self);
 void FileCallMenuAffirm_destroy(FileCallMenuAffirm self);
+int FileCallMenuAffirm_getOperateType(FileCallMenuAffirm self);
+int FileCallMenuAffirm_getResultDescribe(FileCallMenuAffirm self);
+int FileCallMenuAffirm_getCatalogueID(FileCallMenuAffirm self);
+int FileCallMenuAffirm_getFilenum(FileCallMenuAffirm self);
+int FileCallMenuAffirm_getFollowupFlag(FileCallMenuAffirm self);
+int FileCallMenuAffirm_getFilenamelen(FileCallMenuAffirm self,int index);
+int FileCallMenuAffirm_getFileProperty(FileCallMenuAffirm self,int index);
+int FileCallMenuAffirm_getFileSize(FileCallMenuAffirm self,int index);
+CP56Time2a FileCallMenuAffirm_getFileTime(FileCallMenuAffirm self,int index);
+char* FileCallMenuAffirm_getFilename(FileCallMenuAffirm self,int index);
 
 
 typedef struct  sFileActivate* FileActivate;//读文件激活
