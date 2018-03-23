@@ -393,7 +393,7 @@ CS101_ASDU_getTypeOfElements_FaultEventYC(CS101_ASDU self)
 int
 CS101_ASDU_getFileOperateType(CS101_ASDU self)//文件操作标识
 {
-    return (int)(self->asdu[9]);
+    return (int)(self->asdu[10]);
 }
 
 //

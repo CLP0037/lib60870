@@ -1838,9 +1838,23 @@ void FileActivate_destroy(FileActivate self);
 
 
 typedef struct  sFileActivateAffirm* FileActivateAffirm;//读文件激活
+int FileActivateAffirm_getOperateType(FileActivateAffirm self);
+int FileActivateAffirm_getResultDescribe(FileActivateAffirm self);
+int FileActivateAffirm_getFilenamelen(FileActivateAffirm self);
+char* FileActivateAffirm_getFilename(FileActivateAffirm self);
+int FileActivateAffirm_getFileID(FileActivateAffirm self);
+int FileActivateAffirm_getFilesize(FileActivateAffirm self);
 void FileActivateAffirm_destroy(FileActivateAffirm self);
 
 typedef struct  sFileTransfer* FileTransfer;//读文件数据传输确认
+
+int FileTransfer_getOperateType(FileTransfer self);
+int FileTransfer_getCurrentfiledataLen(FileTransfer self);
+int FileTransfer_getFileID(FileTransfer self);
+int FileTransfer_getSegmentnumber(FileTransfer self);
+int FileTransfer_getFollowupFlag(FileTransfer self);
+char* FileTransfer_getFileData(FileTransfer self);
+int FileTransfer_getFileCheckSum(FileTransfer self);
 void FileTransfer_destroy(FileTransfer self);
 
 typedef struct  sFileTransferAffirm* FileTransferAffirm;//读文件数据传输确认

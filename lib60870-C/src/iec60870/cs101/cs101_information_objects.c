@@ -7422,7 +7422,7 @@ FileCallMenuAffirm_encode(FileCallMenuAffirm self, Frame frame, CS101_AppLayerPa
     Frame_setNextByte (frame, (uint8_t)((self->catalogueID / 0x10000) % 0x100));
     Frame_setNextByte (frame, (uint8_t)((self->catalogueID / 0x1000000) % 0x100));
 
-    Frame_setNextByte (frame, self->resultDescribe);
+    Frame_setNextByte (frame, self->followupFlag);
 
     Frame_setNextByte (frame, self->file_num);
 
@@ -7661,7 +7661,8 @@ FileActivate FileActivate_create(FileActivate self, int ioa, uint8_t operateType
 
 void FileActivate_destroy(FileActivate self)
 {
-    GLOBAL_FREEMEM(self);
+    if (self != NULL)
+        GLOBAL_FREEMEM(self);
 }
 
 
@@ -7677,9 +7678,28 @@ FileActivateAffirm_encode(FileActivateAffirm self, Frame frame, CS101_AppLayerPa
 
     Frame_setNextByte (frame, 2);//附加数据包类型 1-备用  2-文件传输  3-备用  4-备用
 
-    //uint8_t operateType;           //1字节:操作标识  1：读目录
+//    uint8_t operateType;           //1字节:操作标识  4：读文件激活确认
+//    uint8_t resultDescribe;        //1字节:结果描述字 0-成功 1-失败
+//    uint8_t fileNamelength;        //1字节：文件长度
+//    char* fileName;             //x字节：文件名
+//    uint32_t fileID;               //4字节：文件ID
+//    uint32_t fileSize;             //4字节：文件大小
+    Frame_setNextByte (frame, self->operateType);//4：读文件激活确认
 
-    Frame_setNextByte (frame, self->operateType);
+    Frame_setNextByte (frame, self->resultDescribe);
+
+    Frame_setNextByte (frame, self->fileNamelength);
+    Frame_appendBytes(frame, (uint8_t*)(&(self->fileName)), self->fileNamelength);
+
+    Frame_setNextByte (frame, (uint8_t)(self->fileID % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x1000000) % 0x100));
+
+    Frame_setNextByte (frame, (uint8_t)(self->fileSize % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileSize / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileSize / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileSize / 0x1000000) % 0x100));
 
 
 
@@ -7704,16 +7724,96 @@ FileActivateAffirm
 FileActivateAffirm_getFromBuffer(FileActivateAffirm self, CS101_AppLayerParameters parameters,
                                  uint8_t* msg, int msgSize, int startIndex, bool isSequence)
 {
+    if (self == NULL)
+       self = (FileActivateAffirm) GLOBAL_MALLOC(sizeof(struct sFileActivateAffirm));
 
+    if (self != NULL) {
+
+        FileActivateAffirm_initialize(self);
+
+        if (!isSequence) {
+            InformationObject_getFromBuffer((InformationObject) self, parameters, msg, startIndex);
+
+            startIndex += parameters->sizeOfIOA; /* skip IOA */
+        }
+        startIndex++;//附加数据包类型 2：文件传输；
+        //    uint8_t operateType;           //1字节:操作标识  4：读文件激活确认
+        //    uint8_t resultDescribe;        //1字节:结果描述字 0-成功 1-失败
+        //    uint8_t fileNamelength;        //1字节：文件长度
+        //    char* fileName;             //x字节：文件名
+        //    uint32_t fileID;               //4字节：文件ID
+        //    uint32_t fileSize;             //4字节：文件大小
+        //操作标识   2：读目录确认
+        self->operateType = msg[startIndex++];
+        //结果描述字
+        self->resultDescribe = msg[startIndex++];
+        //文件名长度
+        self->fileNamelength = msg [startIndex++];
+        //文件名称
+        for(int len=0;len<256;len++)
+        {
+            if(len<self->fileNamelength)
+                self->fileName[len]=msg [startIndex++];
+            else
+                self->fileName[len]='\0';
+        }
+        //文件ID
+        self->fileID = msg [startIndex++];
+        self->fileID += (msg [startIndex++] * 0x100);
+        self->fileID += (msg [startIndex++] * 0x10000);
+        self->fileID += (msg [startIndex++] * 0x1000000);
+        //文件大小
+        self->fileSize = msg [startIndex++];
+        self->fileSize += (msg [startIndex++] * 0x100);
+        self->fileSize += (msg [startIndex++] * 0x10000);
+        self->fileSize += (msg [startIndex++] * 0x1000000);
+
+    }
 
 
 
     return self;
 }
 
+int
+FileActivateAffirm_getOperateType(FileActivateAffirm self)
+{
+    return self->operateType;
+}
+
+int
+FileActivateAffirm_getResultDescribe(FileActivateAffirm self)
+{
+    return self->resultDescribe;
+}
+
+int
+FileActivateAffirm_getFilenamelen(FileActivateAffirm self)
+{
+    return self->fileNamelength;
+}
+
+char* FileActivateAffirm_getFilename(FileActivateAffirm self)
+{
+    return (char*)(self->fileName);
+}
+
+int
+FileActivateAffirm_getFileID(FileActivateAffirm self)
+{
+    return self->fileID;
+}
+
+int
+FileActivateAffirm_getFilesize(FileActivateAffirm self)
+{
+    return self->fileSize;
+}
+
 void FileActivateAffirm_destroy(FileActivateAffirm self)
 {
-    GLOBAL_FREEMEM(self);
+    if (self != NULL)
+        GLOBAL_FREEMEM(self);
 }
 
 /*************************************************
@@ -7727,11 +7827,33 @@ FileTransfer_encode(FileTransfer self, Frame frame, CS101_AppLayerParameters par
 
     Frame_setNextByte (frame, 2);//附加数据包类型 1-备用  2-文件传输  3-备用  4-备用
 
-    //uint8_t operateType;           //1字节:操作标识  1：读目录
-
     Frame_setNextByte (frame, self->operateType);
 
+    Frame_setNextByte (frame, (uint8_t)(self->fileID % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x1000000) % 0x100));
 
+    Frame_setNextByte (frame, (uint8_t)(self->segmentnumber % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->segmentnumber / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->segmentnumber / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->segmentnumber / 0x1000000) % 0x100));
+
+    Frame_setNextByte (frame, self->followupFlag);
+
+    //fileData
+    for(int len=0;len<256;len++)
+    {
+        if(self->fileData[len]!='\0'&&Frame_getMsgSize(frame)<255)
+        {
+            Frame_setNextByte (frame, self->fileData[len]);
+        }
+        else
+            break;
+
+    }
+
+    Frame_setNextByte (frame, self->fileCheckSum);
 
     return true;
 }
@@ -7755,15 +7877,106 @@ FileTransfer_getFromBuffer(FileTransfer self, CS101_AppLayerParameters parameter
                                  uint8_t* msg, int msgSize, int startIndex, bool isSequence)
 {
 
+    if (self == NULL)
+       self = (FileTransfer) GLOBAL_MALLOC(sizeof(struct sFileTransfer));
 
+    if (self != NULL) {
 
+        FileTransfer_initialize(self);
+
+        if (!isSequence) {
+            InformationObject_getFromBuffer((InformationObject) self, parameters, msg, startIndex);
+
+            startIndex += parameters->sizeOfIOA; /* skip IOA */
+        }
+        startIndex++;//附加数据包类型 2：文件传输；
+//        uint8_t operateType;           //1字节:操作标识  5：读文件数据
+//        uint32_t fileID;               //4字节：文件ID
+//        uint32_t segmentnumber;        //4字节：数据段号,可以使用文件内容的偏移指针值
+//        uint8_t followupFlag;          //1字节:后续标志,0：无后续,1：有后续
+//        //char* fileData;                //x字节：文件数据
+//        char fileData[256];
+//        uint8_t fileCheckSum;          //1字节:校验码(校验范围：文件数据 校验算法：单字节模和运算)
+        //操作标识   5 读文件数据传输
+        self->operateType = msg[startIndex++];
+
+        //文件ID
+        self->fileID = msg [startIndex++];
+        self->fileID += (msg [startIndex++] * 0x100);
+        self->fileID += (msg [startIndex++] * 0x10000);
+        self->fileID += (msg [startIndex++] * 0x1000000);
+        //数据段号
+        self->segmentnumber = msg [startIndex++];
+        self->segmentnumber += (msg [startIndex++] * 0x100);
+        self->segmentnumber += (msg [startIndex++] * 0x10000);
+        self->segmentnumber += (msg [startIndex++] * 0x1000000);
+
+        //后续标志
+        self->followupFlag = msg[startIndex++];
+        //x字节：文件数据
+        //1字节:校验码
+        //if (msgSize < startIndex + 7)
+        int temp_filesize = msgSize - startIndex-1;
+        for(int len=0;len<256;len++)
+        {
+            if(len<temp_filesize)
+                self->fileData[len]=msg [startIndex++];
+            else
+                self->fileData[len]='\0';
+        }
+        self->fileCheckSum = msg[startIndex++];
+        self->file_currentlen = temp_filesize;
+
+    }
 
     return self;
 }
 
+int
+FileTransfer_getOperateType(FileTransfer self)
+{
+    return self->operateType;
+}
+
+int
+FileTransfer_getCurrentfiledataLen(FileTransfer self)
+{
+    return self->file_currentlen;
+}
+
+int
+FileTransfer_getFileID(FileTransfer self)
+{
+    return self->fileID;
+}
+
+int
+FileTransfer_getSegmentnumber(FileTransfer self)
+{
+    return self->segmentnumber;
+}
+
+int
+FileTransfer_getFollowupFlag(FileTransfer self)
+{
+    return self->followupFlag;
+}
+
+char* FileTransfer_getFileData(FileTransfer self)
+{
+    return (char*)self->fileData;
+}
+
+int
+FileTransfer_getFileCheckSum(FileTransfer self)
+{
+    return self->fileCheckSum;
+}
+
 void FileTransfer_destroy(FileTransfer self)
 {
-    GLOBAL_FREEMEM(self);
+    if (self != NULL)
+        GLOBAL_FREEMEM(self);
 }
 
 
@@ -7795,8 +8008,6 @@ FileTransferAffirm_encode(FileTransferAffirm self, Frame frame, CS101_AppLayerPa
     Frame_setNextByte (frame, (uint8_t)((self->segmentnumber / 0x1000000) % 0x100));
 
     Frame_setNextByte (frame, self->followupFlag);
-
-
 
     return true;
 }

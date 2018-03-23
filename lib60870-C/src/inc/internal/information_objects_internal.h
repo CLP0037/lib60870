@@ -1263,7 +1263,8 @@ struct sFileActivateAffirm{//读文件激活确认
     uint8_t operateType;           //1字节:操作标识  4：读文件激活确认
     uint8_t resultDescribe;        //1字节:结果描述字 0-成功 1-失败
     uint8_t fileNamelength;        //1字节：文件长度
-    char* fileName;             //x字节：文件名
+    //char* fileName;             //x字节：文件名
+    char fileName[256];
     uint32_t fileID;               //4字节：文件ID
     uint32_t fileSize;             //4字节：文件大小
 
@@ -1285,7 +1286,9 @@ struct sFileTransfer{//读文件传输
     uint32_t fileID;               //4字节：文件ID
     uint32_t segmentnumber;        //4字节：数据段号,可以使用文件内容的偏移指针值
     uint8_t followupFlag;          //1字节:后续标志,0：无后续,1：有后续
-    char* fileData;                //x字节：文件数据
+    //char* fileData;                //x字节：文件数据
+    char fileData[256];
+    uint8_t file_currentlen; //当前段长度
     uint8_t fileCheckSum;          //1字节:校验码(校验范围：文件数据 校验算法：单字节模和运算)
 };
 
