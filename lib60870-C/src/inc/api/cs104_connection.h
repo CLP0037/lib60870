@@ -264,6 +264,13 @@ bool
 CS104_Connection_sendProcessCommand(CS104_Connection self, TypeID typeId, CS101_CauseOfTransmission cot,
         int ca, InformationObject command);
 
+//远程参数和数据读写
+bool
+CS104_Connection_sendParamValueRead(CS104_Connection self, CS101_CauseOfTransmission cot, int vsq,int ca, int sn,InformationObject sc);
+
+bool
+CS104_Connection_sendParamValueWrite(CS104_Connection self, CS101_CauseOfTransmission cot, int vsq,int ca, int sn,int paramti, InformationObject sc);
+
 //文件服务====
 bool
 CS104_Connection_sendFileservingCommand(CS104_Connection self, CS101_CauseOfTransmission cot, int ca, InformationObject sc);

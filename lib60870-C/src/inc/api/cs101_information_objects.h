@@ -358,12 +358,20 @@ typedef struct sFaultEventWithCP56Time2a* FaultEventWithCP56Time2a;
 //FaultEventWithCP56Time2a
 //FaultEventWithCP56Time2a_create(FaultEventWithCP56Time2a self, int ioa, bool value_yx, float value_yc,
 //                                int type,int num,bool isEncodeYXelseYC,bool isEncodefirstframe,CP56Time2a timestamp);
+int FaultEventWithCP56Time2a_getYXnum(FaultEventWithCP56Time2a self);
+int FaultEventWithCP56Time2a_getYXtype(FaultEventWithCP56Time2a self);
+int FaultEventWithCP56Time2a_getYXaddr(FaultEventWithCP56Time2a self,int index);
+int FaultEventWithCP56Time2a_getYXdata(FaultEventWithCP56Time2a self,int index);
+CP56Time2a FaultEventWithCP56Time2a_getTimestamp(FaultEventWithCP56Time2a self,int index);
 
-void
-FaultEventWithCP56Time2a_destroy(FaultEventWithCP56Time2a self);
+int FaultEventWithCP56Time2a_getYCnum(FaultEventWithCP56Time2a self);
+int FaultEventWithCP56Time2a_getYCtype(FaultEventWithCP56Time2a self);
+int FaultEventWithCP56Time2a_getYCaddr(FaultEventWithCP56Time2a self,int index);
+float FaultEventWithCP56Time2a_getYCdata(FaultEventWithCP56Time2a self,int index);
 
-CP56Time2a
-FaultEventWithCP56Time2a_getTimestamp(FaultEventWithCP56Time2a self);
+void FaultEventWithCP56Time2a_destroy(FaultEventWithCP56Time2a self);
+
+
 
 
 /************************************************
@@ -1807,6 +1815,86 @@ FileDirectory_getCreationTime(FileDirectory self);
 void
 FileDirectory_destroy(FileDirectory self);
 
+
+
+
+//RemoteReposition
+typedef struct sRemoteReposition* RemoteReposition;
+
+RemoteReposition
+RemoteReposition_create(RemoteReposition self, int ioa, uint16_t sn);//切换定值区
+
+void
+RemoteReposition_destroy(RemoteReposition self);
+
+//RemoteReadSN===201
+typedef struct sRemoteReadSN* RemoteReadSN;
+
+RemoteReadSN
+RemoteReadSN_create(RemoteReadSN self, int ioa);//读当前定值区号
+
+void
+RemoteReadSN_destroy(RemoteReadSN self);
+
+int16_t//int
+RemoteReadSN_getSN1(RemoteReadSN self);
+int16_t//int
+RemoteReadSN_getSN2(RemoteReadSN self);
+int64_t//int
+RemoteReadSN_getSN3(RemoteReadSN self);
+
+//ParamValue_Read===202
+typedef struct sParamValue_Read* ParamValue_Read;
+//typedef struct sParamRead* ParamRead;
+
+//ParamValue_Read
+//ParamValue_Read_create(ParamValue_Read self, int ioa, uint16_t sn);//可变帧长限定词 VSQ有效
+ParamValue_Read
+ParamValue_Read_create(ParamValue_Read self, int ioa_index);//int sn, ParamRead
+
+void
+ParamValue_Read_destroy(ParamValue_Read self);
+
+int8_t//int
+ParamValue_Read_getSN(ParamValue_Read self);
+int
+ParamValue_Read_getParamReadnum(ParamValue_Read self);
+
+//ParamRead
+//ParamValue_Read_getParamReadstruct(ParamValue_Read self);
+int
+ParamValue_Read_getParamReadinfoaddr(ParamValue_Read self,int index);
+int
+ParamValue_Read_getParamReadtagtype(ParamValue_Read self,int index);
+int
+ParamValue_Read_getParamReaddatalen(ParamValue_Read self,int index);
+char*
+ParamValue_Read_getParamReaddatavalue(ParamValue_Read self,int index);
+
+//ParamValue_Write===203
+typedef struct sParamValue_Write* ParamValue_Write;
+
+ParamValue_Write
+ParamValue_Write_create(ParamValue_Write self, int ioa_index,int tag_index,int datalen,char* datavalue);//int sn, ParamRead paramRead ParamRead读参数和定值int ioa
+//ParamValue_Write_create(ParamValue_Write self, int ioa, uint16_t sn,uint8_t param_TI,uint8_t Tag_type,uint8_t data_len,char* data_value);//可变帧长限定词 VSQ有效
+
+void
+ParamValue_Write_destroy(ParamValue_Write self);
+
+unsigned char
+ParamValue_Write_getParamTI(ParamValue_Write self);
+unsigned char
+ParamValue_Write_getSN(ParamValue_Write self);
+unsigned char
+ParamValue_Write_getParamWritenum(ParamValue_Write self);
+int
+ParamValue_Write_getParamWriteinfoaddr(ParamValue_Write self,int index);
+unsigned char
+ParamValue_Write_getParamWritetagtype(ParamValue_Write self,int index);
+unsigned char
+ParamValue_Write_getParamWritedatalen(ParamValue_Write self,int index);
+char*
+ParamValue_Write_getParamWritedatavalue(ParamValue_Write self,int index);
 
 /*************************************************
  * FileServer(selfdefine) : InformationObject

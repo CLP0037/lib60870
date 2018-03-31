@@ -1022,6 +1022,44 @@ CS104_Connection_sendProcessCommand(CS104_Connection self, TypeID typeId, CS101_
     return sendASDUInternal(self, frame);
 }
 
+//200-203 远程参数读写
+bool
+CS104_Connection_sendParamValueRead(CS104_Connection self, CS101_CauseOfTransmission cot, int vsq,int ca, int sn,InformationObject sc)
+{
+    Frame frame = (Frame) T104Frame_create();
+
+    encodeIdentificationField(self, frame, C_RS_NA_1, vsq, cot, ca);
+
+    //定值区号SN
+    Frame_setNextByte(frame, (uint8_t) (sn & 0xff));
+    Frame_setNextByte(frame, (uint8_t) ((sn / 0x100) & 0xff));
+
+    if(vsq != 0)//读全部时，vsq=0;读多个时，vsq=对应信息元素个数
+        InformationObject_encode(sc, frame, (CS101_AppLayerParameters) &(self->alParameters), false);
+
+    return sendASDUInternal(self, frame);
+}
+
+bool
+CS104_Connection_sendParamValueWrite(CS104_Connection self, CS101_CauseOfTransmission cot, int vsq,int ca, int sn,int paramti, InformationObject sc)
+{
+    Frame frame = (Frame) T104Frame_create();
+
+    encodeIdentificationField(self, frame, C_WS_NA_1, vsq, cot, ca);
+
+    //定值区号SN
+    Frame_setNextByte(frame, (uint8_t) (sn & 0xff));
+    Frame_setNextByte(frame, (uint8_t) ((sn / 0x100) & 0xff));
+
+    //参数特征标识  1 字节
+    Frame_setNextByte(frame, (uint8_t)paramti);
+
+    InformationObject_encode(sc, frame, (CS101_AppLayerParameters) &(self->alParameters), false);
+
+    return sendASDUInternal(self, frame);
+}
+
+
 //========== <210>	：文件服务 ==========//
 //Fileserving文件服务   F_FR_NA_1=210
 //===7.6.3.1 召唤文目录服务报文;7.6.3.2 读文件服务报文;7.6.3.3 写文件服务报文

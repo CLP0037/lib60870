@@ -293,6 +293,23 @@ FileDirectory
 FileDirectory_getFromBuffer(FileDirectory self, CS101_AppLayerParameters parameters,
         uint8_t* msg, int msgSize, int startIndex, bool isSequence);
 
+//远程参数读写===新增
+RemoteReposition
+RemoteReposition_getFromBuffer(RemoteReposition self, CS101_AppLayerParameters parameters,
+        uint8_t* msg, int msgSize, int startIndex, bool isSequence);
+
+RemoteReadSN
+RemoteReadSN_getFromBuffer(RemoteReadSN self, CS101_AppLayerParameters parameters,
+        uint8_t* msg, int msgSize, int startIndex, bool isSequence);//读当前定值区号
+
+ParamValue_Read
+ParamValue_Read_getFromBuffer(ParamValue_Read self, CS101_AppLayerParameters parameters,
+        uint8_t* msg, int msgSize, int startIndex, bool isSequence,int nums);
+
+ParamValue_Write
+ParamValue_Write_getFromBuffer(ParamValue_Write self, CS101_AppLayerParameters parameters,
+        uint8_t* msg, int msgSize, int startIndex, bool isSequence,int nums);
+
 //文件服务===新增
 FileCallMenu
 FileCallMenu_getFromBuffer(FileCallMenu self, CS101_AppLayerParameters parameters,
@@ -436,6 +453,19 @@ struct sSinglePointWithCP56Time2a {
 };
 
 //42==故障事件信息 FaultEventWithCP56Time2a
+struct sFaultEven_YX
+{
+    unsigned int        addr;
+    unsigned char 		State;
+    struct sCP56Time2a timestamp;
+};
+
+struct sFaultEven_YC
+{
+    unsigned int addr;
+    float Yc_Value;
+};
+
 struct sFaultEventWithCP56Time2a {
     int objectAddress;
 
@@ -446,16 +476,16 @@ struct sFaultEventWithCP56Time2a {
     bool isEncodeYXelseYC;
     bool isEncodefirstframe;
 
-    int type_YX;
-    int num_YX;
-    bool value_YX;
+    int type_YX;  //遥信类型
+    int num_YX;   //带时标遥信个数
+    //bool value_YX;
+    struct sFaultEven_YX structFaultEven_YX[1024];
 
+    int type_YC;  //遥测类型
+    int num_YC;   //遥测个数
+    //float value_YC;
+    struct sFaultEven_YC structFaultEven_YC[1024];
 
-    int type_YC;
-    int num_YC;
-    float value_YC;
-
-    struct sCP56Time2a timestamp;
 };
 
 struct sBitString32 {
@@ -1175,6 +1205,73 @@ struct sFileDirectory {//<126>	：=目录
     uint8_t sof; /* state of file */
 
     struct sCP56Time2a creationTime;
+};
+
+//远程参数读写
+//<200>：= 切换定值区 C_SR_NA_1
+//<201>：= 读定值区号 C_RR_NA_1
+//<202>：= 读参数和定值 C_RS_NA_1
+//<203>：= 写参数和定值 C_WS_NA_1
+struct sRemoteReposition{//200==切换定制区
+    int objectAddress;
+    TypeID type;
+    InformationObjectVFT virtualFunctionTable;
+
+    uint16_t SN;//定值区号 SN  2 字节
+};
+
+struct sRemoteReadSN{//201==读定值区号
+    int objectAddress;
+    TypeID type;
+    InformationObjectVFT virtualFunctionTable;
+
+    uint16_t SN1;//当前定值区区号 SN1
+    uint16_t SN2;//终端支持的最小定值区号 SN2
+    int64_t SN3;//终端支持的最大定值区号 SN3
+};
+
+struct _sParamRead{
+    int informationAddr;//信息体地址  3 字节
+    uint8_t tagType;//Tag 类型  1 字节
+    uint8_t datalen;//数据长度  1 字节
+    char datavalue[128];//数据值  由数据长度决定
+
+};
+
+struct sParamRead{
+    int paramNums;//参数个数
+    struct _sParamRead structParamRead[1024];
+};
+
+struct sParamValue_Read{//202==读参数和定值
+    int objectAddress;
+    TypeID type;
+    InformationObjectVFT virtualFunctionTable;
+
+    int infoaddr[1024];
+    //int paramNums;//参数个数
+
+    uint8_t paramTI;//参数特征标识
+    uint16_t SN;//定值区号 SN
+    sParamRead __sParamRead;//sParamRead *ParamRead;
+};
+
+struct sParamWrite{
+    int informationAddr;//信息体地址  3 字节
+    uint8_t tagType;//Tag 类型  1 字节
+    uint8_t datalen;//数据长度  1 字节
+    char datavalue[128];//数据值  由数据长度决定
+
+};
+struct sParamValue_Write{//203==写参数和定值
+    int objectAddress;
+    TypeID type;
+    InformationObjectVFT virtualFunctionTable;
+
+    uint8_t paramTI;//参数特征标识
+    uint16_t SN;//定值区号 SN
+    int paramNums;//参数个数
+    struct sParamWrite structParamWrite[1024];
 };
 
 //========== <210>	：文件服务 ==========//

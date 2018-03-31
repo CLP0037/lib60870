@@ -924,6 +924,8 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
 
     /* 41 - 44 reserved */
     case  M_FT_NA_1: /* 42 <42>∶＝故障事件信息*/
+
+        /*
         if(index < CS101_ASDU_getNumberOfElements_FaultEventYX(self))
         {
             //遥信类型（1字节）+遥信个数（1字节）+遥信数据（点号+值+时标）
@@ -946,6 +948,11 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
                     +2+(index-CS101_ASDU_getNumberOfElements_FaultEventYX(self))*(self->parameters->sizeOfIOA + elementSize);
             retVal  = (InformationObject) FaultEventWithCP56Time2a_getFromBuffer(NULL, self->parameters,self->payload, self->payloadSize,index_yc, false);
         }
+        */
+
+        retVal  = (InformationObject) FaultEventWithCP56Time2a_getFromBuffer(NULL, self->parameters,
+            self->payload, self->payloadSize, 0, false);
+
         break;
     /* 41 - 44 reserved */
 
@@ -1210,6 +1217,39 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
 //        F_FR_NA_1 = 210,//<210>：= 文件传输
 //        F_SR_NA_1 = 211 //<211>：= 软件升级
 
+    case C_SR_NA_1://200
+        retVal  = (InformationObject) RemoteReposition_getFromBuffer(NULL, self->parameters,
+            self->payload, self->payloadSize, 0, false);
+
+        break;
+
+    case C_RR_NA_1://201
+        //RemoteReadSN_getFromBuffer(RemoteReadSN self, CS101_AppLayerParameters parameters,
+        //     uint8_t* msg, int msgSize, int startIndex, bool isSequence)
+        retVal  = (InformationObject) RemoteReadSN_getFromBuffer(NULL, self->parameters,
+            self->payload, self->payloadSize, 0, false);
+
+        break;
+
+    case C_RS_NA_1://202
+    {
+//        ParamValue_Read
+//        ParamValue_Read_getFromBuffer(ParamValue_Read self, CS101_AppLayerParameters parameters,
+//                uint8_t* msg, int msgSize, int startIndex, bool isSequence)
+        int nums = CS101_ASDU_getNumberOfElements(self);
+        retVal  = (InformationObject) ParamValue_Read_getFromBuffer(NULL, self->parameters,
+            self->payload, self->payloadSize, 0, false, nums);
+    }break;
+
+    case C_WS_NA_1://203
+    {
+//        ParamValue_Write
+//        ParamValue_Write_getFromBuffer(ParamValue_Write self, CS101_AppLayerParameters parameters,
+//                uint8_t* msg, int msgSize, int startIndex, bool isSequence,int nums);
+        int nums = CS101_ASDU_getNumberOfElements(self);
+        retVal  = (InformationObject) ParamValue_Write_getFromBuffer(NULL, self->parameters,
+            self->payload, self->payloadSize, 0, false, nums);
+    }break;
 
     case F_FR_NA_1: /* 210 - File service */
 

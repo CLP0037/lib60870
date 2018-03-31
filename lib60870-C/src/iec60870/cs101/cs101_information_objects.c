@@ -281,7 +281,7 @@ SinglePointInformation_getFromBuffer(SinglePointInformation self, CS101_AppLayer
     //TODO check message size
 
     if (self == NULL)
-		self = (SinglePointInformation) GLOBAL_MALLOC(sizeof(struct sSinglePointInformation));
+        self = (SinglePointInformation) GLOBAL_MALLOC(sizeof(struct sSinglePointInformation));
 
     if (self != NULL) {
         SinglePointInformation_initialize(self);
@@ -423,7 +423,7 @@ StepPositionInformation_getFromBuffer(StepPositionInformation self, CS101_AppLay
     //TODO check message size
 
     if (self == NULL)
-		self = (StepPositionInformation) GLOBAL_MALLOC(sizeof(struct sStepPositionInformation));
+        self = (StepPositionInformation) GLOBAL_MALLOC(sizeof(struct sStepPositionInformation));
 
     if (self != NULL) {
         StepPositionInformation_initialize(self);
@@ -532,7 +532,7 @@ StepPositionWithCP56Time2a_getFromBuffer(StepPositionWithCP56Time2a self, CS101_
     //TODO check message size
 
     if (self == NULL)
-		self = (StepPositionWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sStepPositionWithCP56Time2a));
+        self = (StepPositionWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sStepPositionWithCP56Time2a));
 
     if (self != NULL) {
         StepPositionWithCP56Time2a_initialize(self);
@@ -644,7 +644,7 @@ StepPositionWithCP24Time2a_getFromBuffer(StepPositionWithCP24Time2a self, CS101_
     //TODO check message size
 
     if (self == NULL)
-		self = (StepPositionWithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sStepPositionWithCP24Time2a));
+        self = (StepPositionWithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sStepPositionWithCP24Time2a));
 
     if (self != NULL) {
         StepPositionWithCP24Time2a_initialize(self);
@@ -744,7 +744,7 @@ DoublePointInformation_getFromBuffer(DoublePointInformation self, CS101_AppLayer
     //TODO check message size
 
     if (self == NULL)
-		self = (DoublePointInformation) GLOBAL_MALLOC(sizeof(struct sDoublePointInformation));
+        self = (DoublePointInformation) GLOBAL_MALLOC(sizeof(struct sDoublePointInformation));
 
     if (self != NULL) {
         DoublePointInformation_initialize(self);
@@ -844,7 +844,7 @@ DoublePointWithCP24Time2a_getFromBuffer(DoublePointWithCP24Time2a self, CS101_Ap
     //TODO check message size
 
     if (self == NULL)
-		self = (DoublePointWithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sDoublePointWithCP24Time2a));
+        self = (DoublePointWithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sDoublePointWithCP24Time2a));
 
     if (self != NULL) {
         DoublePointWithCP24Time2a_initialize(self);
@@ -949,7 +949,7 @@ DoublePointWithCP56Time2a_getFromBuffer(DoublePointWithCP56Time2a self, CS101_Ap
     //TODO check message size
 
     if (self == NULL)
-		self = (DoublePointWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sDoublePointWithCP56Time2a));
+        self = (DoublePointWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sDoublePointWithCP56Time2a));
 
     if (self != NULL) {
         DoublePointWithCP56Time2a_initialize(self);
@@ -1052,7 +1052,7 @@ SinglePointWithCP24Time2a_getFromBuffer(SinglePointWithCP24Time2a self, CS101_Ap
     //TODO check message size
 
     if (self == NULL)
-		self = (SinglePointWithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sSinglePointWithCP24Time2a));
+        self = (SinglePointWithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sSinglePointWithCP24Time2a));
 
     if (self != NULL) {
         SinglePointWithCP24Time2a_initialize(self);
@@ -1158,7 +1158,7 @@ SinglePointWithCP56Time2a_getFromBuffer(SinglePointWithCP56Time2a self, CS101_Ap
     //TODO check message size
 
     if (self == NULL)
-		self = (SinglePointWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sSinglePointWithCP56Time2a));
+        self = (SinglePointWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sSinglePointWithCP56Time2a));
 
     if (self != NULL) {
         SinglePointWithCP56Time2a_initialize(self);
@@ -1190,86 +1190,88 @@ SinglePointWithCP56Time2a_getFromBuffer(SinglePointWithCP56Time2a self, CS101_Ap
 static bool
 FaultEventWithCP56Time2a_encode(FaultEventWithCP56Time2a self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
 {
-    if(self->isEncodeYXelseYC && (self->objectAddress >0 && self->objectAddress<0x4001))//状态量信息  1-4000
-    {
-        if(self->isEncodefirstframe)//首次组遥信包
-        {
-            self->isEncodefirstframe=false;
-            Frame_setNextByte(frame, self->num_YX);
-            Frame_setNextByte(frame, self->type_YX);
-        }
-        int size_yx = isSequence ? 8 : (parameters->sizeOfIOA + 8);
-        InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
-        Frame_setNextByte(frame, self->value_YX);
-        /* timestamp */
-        Frame_appendBytes(frame, self->timestamp.encodedValue, 7);
 
-    }
-    else if(self->objectAddress >=0x4001 && self->objectAddress<0x6001)//模拟量信息  4001-6000
-    {
-        if(self->isEncodefirstframe)//首次组遥测包
-        {
-            self->isEncodefirstframe=false;
-            Frame_setNextByte(frame, self->num_YC);
-            Frame_setNextByte(frame, self->type_YC);
-        }
+    //    if(self->isEncodeYXelseYC && (self->objectAddress >0 && self->objectAddress<0x4001))//状态量信息  1-4000
+    //    {
+    //        if(self->isEncodefirstframe)//首次组遥信包
+    //        {
+    //            self->isEncodefirstframe=false;
+    //            Frame_setNextByte(frame, self->num_YX);
+    //            Frame_setNextByte(frame, self->type_YX);
+    //        }
+    //        int size_yx = isSequence ? 8 : (parameters->sizeOfIOA + 8);
+    //        InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+    //        Frame_setNextByte(frame, self->value_YX);
+    //        //timestamp
+    //        Frame_appendBytes(frame, self->timestamp.encodedValue, 7);
 
-        int size_yc = 0;
-        if(self->type_YC ==9||self->type_YC ==34)//归一化值
-        {
-            size_yc = isSequence ? 2 : (parameters->sizeOfIOA + 2);
-            InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+    //    }
+    //    else if(self->objectAddress >=0x4001 && self->objectAddress<0x6001)//模拟量信息  4001-6000
+    //    {
+    //        if(self->isEncodefirstframe)//首次组遥测包
+    //        {
+    //            self->isEncodefirstframe=false;
+    //            Frame_setNextByte(frame, self->num_YC);
+    //            Frame_setNextByte(frame, self->type_YC);
+    //        }
 
-            int valueToEncode;
+    //        int size_yc = 0;
+    //        if(self->type_YC ==9||self->type_YC ==34)//归一化值
+    //        {
+    //            size_yc = isSequence ? 2 : (parameters->sizeOfIOA + 2);
+    //            InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
 
-            if (self->value_YC < 0)
-                valueToEncode = self->value_YC + 65536;
-            else
-                valueToEncode = self->value_YC;
+    //            int valueToEncode;
 
-            //encodedValue[0] = (uint8_t) (valueToEncode % 256);
-            //encodedValue[1] = (uint8_t) (valueToEncode / 256);
+    //            if (self->value_YC < 0)
+    //                valueToEncode = self->value_YC + 65536;
+    //            else
+    //                valueToEncode = self->value_YC;
 
-            Frame_setNextByte(frame, (uint8_t) (valueToEncode % 256));
-            Frame_setNextByte(frame, (uint8_t) (valueToEncode / 256));
-        }
-        else if(self->type_YC ==13||self->type_YC ==36)//浮点型
-        {
-            size_yc = isSequence ? 4 : (parameters->sizeOfIOA + 4);
-            InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
-            uint8_t* valueBytes = (uint8_t*) &(self->value_YC);
+    //            //encodedValue[0] = (uint8_t) (valueToEncode % 256);
+    //            //encodedValue[1] = (uint8_t) (valueToEncode / 256);
 
-        #if (ORDER_LITTLE_ENDIAN == 1)
-            Frame_appendBytes(frame, valueBytes, 4);
-        #else
-            Frame_setNextByte(frame, valueBytes[3]);
-            Frame_setNextByte(frame, valueBytes[2]);
-            Frame_setNextByte(frame, valueBytes[1]);
-            Frame_setNextByte(frame, valueBytes[0]);
-        #endif
-        }
+    //            Frame_setNextByte(frame, (uint8_t) (valueToEncode % 256));
+    //            Frame_setNextByte(frame, (uint8_t) (valueToEncode / 256));
+    //        }
+    //        else if(self->type_YC ==13||self->type_YC ==36)//浮点型
+    //        {
+    //            size_yc = isSequence ? 4 : (parameters->sizeOfIOA + 4);
+    //            InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+    //            uint8_t* valueBytes = (uint8_t*) &(self->value_YC);
 
-        if(size_yc == 0)
-        {
-            //error log print
-            return false;
-        }
+    //        #if (ORDER_LITTLE_ENDIAN == 1)
+    //            Frame_appendBytes(frame, valueBytes, 4);
+    //        #else
+    //            Frame_setNextByte(frame, valueBytes[3]);
+    //            Frame_setNextByte(frame, valueBytes[2]);
+    //            Frame_setNextByte(frame, valueBytes[1]);
+    //            Frame_setNextByte(frame, valueBytes[0]);
+    //        #endif
+    //        }
+
+    //        if(size_yc == 0)
+    //        {
+    //            //error log print
+    //            return false;
+    //        }
 
 
-    }
-    else
-    {
-        //error log print
-        return false;
-    }
+    //    }
+    //    else
+    //    {
+    //        //error log print
+    //        return false;
+    //    }
 
-    return true;
+
+        return true;
 }
 
 
-struct sInformationObjectVFT FaultEventWithCP56Time2aVFT = {
-        (EncodeFunction) FaultEventWithCP56Time2a_encode,
-        (DestroyFunction) FaultEventWithCP56Time2a_destroy
+struct sInformationObjectVFT FaultEventWithCP56Time2aVFT ={
+       (EncodeFunction) FaultEventWithCP56Time2a_encode,
+       (DestroyFunction) FaultEventWithCP56Time2a_destroy
 };
 
 static void
@@ -1278,7 +1280,6 @@ FaultEventWithCP56Time2a_initialize(FaultEventWithCP56Time2a self)
     self->virtualFunctionTable = &(FaultEventWithCP56Time2aVFT);
     self->type = M_FT_NA_1;
 }
-
 
 //FaultEventWithCP56Time2a
 //FaultEventWithCP56Time2a_create(FaultEventWithCP56Time2a self, int ioa, bool value_yx, float value_yc,
@@ -1337,17 +1338,7 @@ FaultEventWithCP56Time2a_initialize(FaultEventWithCP56Time2a self)
 //    return self;
 //}
 
-void
-FaultEventWithCP56Time2a_destroy(FaultEventWithCP56Time2a self)
-{
-    GLOBAL_FREEMEM(self);
-}
 
-CP56Time2a
-FaultEventWithCP56Time2a_getTimestamp(FaultEventWithCP56Time2a self)
-{
-    return &(self->timestamp);
-}
 
 
 FaultEventWithCP56Time2a
@@ -1368,38 +1359,112 @@ FaultEventWithCP56Time2a_getFromBuffer(FaultEventWithCP56Time2a self, CS101_AppL
         }
 
         //YX
-        /* value */
-        uint8_t siq = msg [startIndex++];
-        self->value_YX = ((siq & 0x01) == 0x01);
-        /* timestamp */
-        CP56Time2a_getFromBuffer(&(self->timestamp), msg, msgSize, startIndex);
+        self->num_YX = msg [startIndex++];//带时标遥信个数
+        self->type_YX = msg [startIndex++];//遥信类型======单点=1 双点=3
+
+        int i=0;
+        for(i=0;i<self->num_YX;i++)
+        {
+            //故障遥信点号  2 字节
+            self->structFaultEven_YX[i].addr = msg [startIndex++];
+            self->structFaultEven_YX[i].addr += (msg [startIndex++] * 0x100);
+            //遥信值  1 字节
+            self->structFaultEven_YX[i].State = msg [startIndex++];
+            //故障时刻时标 CP56Time2a  7 字节
+            CP56Time2a_getFromBuffer(&(self->structFaultEven_YX[i].timestamp), msg, msgSize, startIndex);
+            startIndex += 7;
+        }
 
         //YC
-        /* value(归一化值) */
-        self->value_YC = msg [startIndex++];//低位在前高位在后
-        self->value_YC += 256*msg [startIndex++];
+        self->num_YC = msg [startIndex++];//遥测个数
+        self->type_YC = msg [startIndex++];//遥测类型
+        for(i=0;i<self->num_YC;i++)
+        {
+            //遥测信息体地址 1  3 字节
+            self->structFaultEven_YC[i].addr = msg [startIndex++];
+            self->structFaultEven_YC[i].addr += (msg [startIndex++] * 0x100);
+            self->structFaultEven_YC[i].addr += (msg [startIndex++] * 0x10000);
+            //故障时刻数据 1 归一化值（或 IEEE STD745 短浮点数）  2 字节（4 字节）
+            if(self->type_YC == 13)//浮点型
+            {
+                uint8_t* valueBytes = (uint8_t*) &(self->structFaultEven_YC[i].Yc_Value);
 
-        /* value(浮点数) */
-        uint8_t* valueBytes = (uint8_t*) &(self->value_YC);
+                #if (ORDER_LITTLE_ENDIAN == 1)
+                        valueBytes[0] = msg [startIndex++];
+                        valueBytes[1] = msg [startIndex++];
+                        valueBytes[2] = msg [startIndex++];
+                        valueBytes[3] = msg [startIndex++];
+                #else
+                        valueBytes[3] = msg [startIndex++];
+                        valueBytes[2] = msg [startIndex++];
+                        valueBytes[1] = msg [startIndex++];
+                        valueBytes[0] = msg [startIndex++];
+                #endif
+            }
+            else if(self->type_YC == 9||self->type_YC == 11)//归一化
+            {
+                self->structFaultEven_YC[i].Yc_Value = msg [startIndex++];
+                self->structFaultEven_YC[i].Yc_Value += (msg [startIndex++] * 0x100);
+            }
 
-#if (ORDER_LITTLE_ENDIAN == 1)
-        valueBytes[0] = msg [startIndex++];
-        valueBytes[1] = msg [startIndex++];
-        valueBytes[2] = msg [startIndex++];
-        valueBytes[3] = msg [startIndex++];
-#else
-        valueBytes[3] = msg [startIndex++];
-        valueBytes[2] = msg [startIndex++];
-        valueBytes[1] = msg [startIndex++];
-        valueBytes[0] = msg [startIndex++];
-#endif
-
+        }
 
     }
 
     return self;
 }
 
+int FaultEventWithCP56Time2a_getYXnum(FaultEventWithCP56Time2a self)
+{
+    return (self->num_YX);
+}
+
+int FaultEventWithCP56Time2a_getYXtype(FaultEventWithCP56Time2a self)
+{
+    return (self->type_YX);
+}
+
+int FaultEventWithCP56Time2a_getYXaddr(FaultEventWithCP56Time2a self,int index)
+{
+    return (self->structFaultEven_YX[index].addr);
+}
+
+int FaultEventWithCP56Time2a_getYXdata(FaultEventWithCP56Time2a self,int index)
+{
+    return (self->structFaultEven_YX[index].State);
+}
+
+CP56Time2a
+FaultEventWithCP56Time2a_getTimestamp(FaultEventWithCP56Time2a self,int index)
+{
+    return &(self->structFaultEven_YX[index].timestamp);
+}
+
+int FaultEventWithCP56Time2a_getYCnum(FaultEventWithCP56Time2a self)
+{
+    return (self->num_YC);
+}
+
+int FaultEventWithCP56Time2a_getYCtype(FaultEventWithCP56Time2a self)
+{
+    return (self->type_YC);
+}
+
+int FaultEventWithCP56Time2a_getYCaddr(FaultEventWithCP56Time2a self,int index)
+{
+    return (self->structFaultEven_YC[index].addr);
+}
+
+float FaultEventWithCP56Time2a_getYCdata(FaultEventWithCP56Time2a self,int index)
+{
+    return (self->structFaultEven_YC[index].Yc_Value);
+}
+
+void
+FaultEventWithCP56Time2a_destroy(FaultEventWithCP56Time2a self)
+{
+    GLOBAL_FREEMEM(self);
+}
 
 
 /**********************************************
@@ -1481,7 +1546,7 @@ BitString32_getFromBuffer(BitString32 self, CS101_AppLayerParameters parameters,
     //TODO check message size
 
     if (self == NULL)
-		self = (BitString32) GLOBAL_MALLOC(sizeof(struct sBitString32));
+        self = (BitString32) GLOBAL_MALLOC(sizeof(struct sBitString32));
 
     if (self != NULL) {
         BitString32_initialize(self);
@@ -1584,7 +1649,7 @@ Bitstring32WithCP24Time2a_getFromBuffer(Bitstring32WithCP24Time2a self, CS101_Ap
     //TODO check message size
 
     if (self == NULL)
-		self = (Bitstring32WithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sBitstring32WithCP24Time2a));
+        self = (Bitstring32WithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sBitstring32WithCP24Time2a));
 
     if (self != NULL) {
         Bitstring32WithCP24Time2a_initialize(self);
@@ -1691,7 +1756,7 @@ Bitstring32WithCP56Time2a_getFromBuffer(Bitstring32WithCP56Time2a self, CS101_Ap
     //TODO check message size
 
     if (self == NULL)
-		self = (Bitstring32WithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sBitstring32WithCP56Time2a));
+        self = (Bitstring32WithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sBitstring32WithCP56Time2a));
 
     if (self != NULL) {
         Bitstring32WithCP56Time2a_initialize(self);
@@ -1842,7 +1907,7 @@ MeasuredValueNormalized_getFromBuffer(MeasuredValueNormalized self, CS101_AppLay
     //TODO check message size
 
     if (self == NULL)
-		self = (MeasuredValueNormalized) GLOBAL_MALLOC(sizeof(struct sMeasuredValueNormalized));
+        self = (MeasuredValueNormalized) GLOBAL_MALLOC(sizeof(struct sMeasuredValueNormalized));
 
     if (self != NULL) {
         MeasuredValueNormalized_initialize(self);
@@ -2099,7 +2164,7 @@ MeasuredValueNormalizedWithCP24Time2a_getFromBuffer(MeasuredValueNormalizedWithC
     //TODO check message size
 
     if (self == NULL)
-		self = (MeasuredValueNormalizedWithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sMeasuredValueNormalizedWithCP24Time2a));
+        self = (MeasuredValueNormalizedWithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sMeasuredValueNormalizedWithCP24Time2a));
 
     if (self != NULL) {
         MeasuredValueNormalizedWithCP24Time2a_initialize(self);
@@ -2206,7 +2271,7 @@ MeasuredValueNormalizedWithCP56Time2a_getFromBuffer(MeasuredValueNormalizedWithC
     //TODO check message size
 
     if (self == NULL)
-		self = (MeasuredValueNormalizedWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sMeasuredValueNormalizedWithCP56Time2a));
+        self = (MeasuredValueNormalizedWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sMeasuredValueNormalizedWithCP56Time2a));
 
     if (self != NULL) {
         MeasuredValueNormalizedWithCP56Time2a_initialize(self);
@@ -2310,7 +2375,7 @@ MeasuredValueScaled_getFromBuffer(MeasuredValueScaled self, CS101_AppLayerParame
     //TODO check message size
 
     if (self == NULL)
-		self = (MeasuredValueScaled) GLOBAL_MALLOC(sizeof(struct sMeasuredValueScaled));
+        self = (MeasuredValueScaled) GLOBAL_MALLOC(sizeof(struct sMeasuredValueScaled));
 
     if (self != NULL) {
         MeasuredValueScaled_initialize(self);
@@ -2462,7 +2527,7 @@ MeasuredValueScaledWithCP24Time2a_getFromBuffer(MeasuredValueScaledWithCP24Time2
     //TODO check message size
 
     if (self == NULL)
-		self = (MeasuredValueScaledWithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sMeasuredValueScaledWithCP24Time2a));
+        self = (MeasuredValueScaledWithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sMeasuredValueScaledWithCP24Time2a));
 
     if (self != NULL) {
         MeasuredValueScaledWithCP24Time2a_initialize(self);
@@ -2567,7 +2632,7 @@ MeasuredValueScaledWithCP56Time2a_getFromBuffer(MeasuredValueScaledWithCP56Time2
     //TODO check message size
 
     if (self == NULL)
-		self = (MeasuredValueScaledWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sMeasuredValueScaledWithCP56Time2a));
+        self = (MeasuredValueScaledWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sMeasuredValueScaledWithCP56Time2a));
 
     if (self != NULL) {
         MeasuredValueScaledWithCP56Time2a_initialize(self);
@@ -2682,7 +2747,7 @@ MeasuredValueShort_getFromBuffer(MeasuredValueShort self, CS101_AppLayerParamete
     //TODO check message size
 
     if (self == NULL)
-		self = (MeasuredValueShort) GLOBAL_MALLOC(sizeof(struct sMeasuredValueShort));
+        self = (MeasuredValueShort) GLOBAL_MALLOC(sizeof(struct sMeasuredValueShort));
 
     if (self != NULL) {
         MeasuredValueShort_initialize(self);
@@ -2844,7 +2909,7 @@ MeasuredValueShortWithCP24Time2a_getFromBuffer(MeasuredValueShortWithCP24Time2a 
     //TODO check message size
 
     if (self == NULL)
-		self = (MeasuredValueShortWithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sMeasuredValueShortWithCP24Time2a));
+        self = (MeasuredValueShortWithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sMeasuredValueShortWithCP24Time2a));
 
     if (self != NULL) {
         MeasuredValueShortWithCP24Time2a_initialize(self);
@@ -2958,7 +3023,7 @@ MeasuredValueShortWithCP56Time2a_getFromBuffer(MeasuredValueShortWithCP56Time2a 
     //TODO check message size
 
     if (self == NULL)
-		self = (MeasuredValueShortWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sMeasuredValueShortWithCP56Time2a));
+        self = (MeasuredValueShortWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sMeasuredValueShortWithCP56Time2a));
 
     if (self != NULL) {
         MeasuredValueShortWithCP56Time2a_initialize(self);
@@ -3069,7 +3134,7 @@ IntegratedTotals_getFromBuffer(IntegratedTotals self, CS101_AppLayerParameters p
     //TODO check message size
 
     if (self == NULL)
-		self = (IntegratedTotals) GLOBAL_MALLOC(sizeof(struct sIntegratedTotals));
+        self = (IntegratedTotals) GLOBAL_MALLOC(sizeof(struct sIntegratedTotals));
 
     if (self != NULL) {
         IntegratedTotals_initialize(self);
@@ -3170,7 +3235,7 @@ IntegratedTotalsWithCP24Time2a_getFromBuffer(IntegratedTotalsWithCP24Time2a self
     //TODO check message size
 
     if (self == NULL)
-		self = (IntegratedTotalsWithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sIntegratedTotalsWithCP24Time2a));
+        self = (IntegratedTotalsWithCP24Time2a) GLOBAL_MALLOC(sizeof(struct sIntegratedTotalsWithCP24Time2a));
 
     if (self != NULL) {
         IntegratedTotalsWithCP24Time2a_initialize(self);
@@ -3274,7 +3339,7 @@ IntegratedTotalsWithCP56Time2a_getFromBuffer(IntegratedTotalsWithCP56Time2a self
     //TODO check message size
 
     if (self == NULL)
-		self = (IntegratedTotalsWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sIntegratedTotalsWithCP56Time2a));
+        self = (IntegratedTotalsWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sIntegratedTotalsWithCP56Time2a));
 
     if (self != NULL) {
         IntegratedTotalsWithCP56Time2a_initialize(self);
@@ -4159,7 +4224,7 @@ SingleCommand
 SingleCommand_create(SingleCommand self, int ioa, bool command, bool selectCommand, int qu)
 {
     if (self == NULL)
-		self = (SingleCommand) GLOBAL_MALLOC(sizeof(struct sSingleCommand));
+        self = (SingleCommand) GLOBAL_MALLOC(sizeof(struct sSingleCommand));
 
     if (self) {
         SingleCommand_initialize(self);
@@ -4204,7 +4269,7 @@ SingleCommand_getFromBuffer(SingleCommand self, CS101_AppLayerParameters paramet
         return NULL;
 
     if (self == NULL)
-		self = (SingleCommand) GLOBAL_MALLOC(sizeof(struct sSingleCommand));
+        self = (SingleCommand) GLOBAL_MALLOC(sizeof(struct sSingleCommand));
 
     if (self != NULL) {
         SingleCommand_initialize(self);
@@ -4262,7 +4327,7 @@ SingleCommandWithCP56Time2a
 SingleCommandWithCP56Time2a_create(SingleCommandWithCP56Time2a self, int ioa, bool command, bool selectCommand, int qu, CP56Time2a timestamp)
 {
     if (self == NULL)
-		self = (SingleCommandWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sSingleCommandWithCP56Time2a));
+        self = (SingleCommandWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sSingleCommandWithCP56Time2a));
 
     if (self) {
         SingleCommandWithCP56Time2a_initialize(self);
@@ -4297,7 +4362,7 @@ SingleCommandWithCP56Time2a_getFromBuffer(SingleCommandWithCP56Time2a self, CS10
         return NULL;
 
     if (self == NULL)
-		self = (SingleCommandWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sSingleCommandWithCP56Time2a));
+        self = (SingleCommandWithCP56Time2a) GLOBAL_MALLOC(sizeof(struct sSingleCommandWithCP56Time2a));
 
     if (self != NULL) {
         SingleCommandWithCP56Time2a_initialize(self);
@@ -4358,7 +4423,7 @@ DoubleCommand
 DoubleCommand_create(DoubleCommand self, int ioa, int command, bool selectCommand, int qu)
 {
     if (self == NULL)
-		self = (DoubleCommand) GLOBAL_MALLOC(sizeof(struct sDoubleCommand));
+        self = (DoubleCommand) GLOBAL_MALLOC(sizeof(struct sDoubleCommand));
 
     if (self) {
         DoubleCommand_initialize(self);
@@ -4403,7 +4468,7 @@ DoubleCommand_getFromBuffer(DoubleCommand self, CS101_AppLayerParameters paramet
         return NULL;
 
     if (self == NULL)
-		self = (DoubleCommand) GLOBAL_MALLOC(sizeof(struct sDoubleCommand));
+        self = (DoubleCommand) GLOBAL_MALLOC(sizeof(struct sDoubleCommand));
 
     if (self != NULL) {
         DoubleCommand_initialize(self);
@@ -4568,7 +4633,7 @@ StepCommand
 StepCommand_create(StepCommand self, int ioa, StepCommandValue command, bool selectCommand, int qu)
 {
     if (self == NULL) {
-		self = (StepCommand) GLOBAL_MALLOC(sizeof(struct sStepCommand));
+        self = (StepCommand) GLOBAL_MALLOC(sizeof(struct sStepCommand));
 
         if (self == NULL)
             return NULL;
@@ -4615,7 +4680,7 @@ StepCommand_getFromBuffer(StepCommand self, CS101_AppLayerParameters parameters,
         return NULL;
 
     if (self == NULL)
-		self = (StepCommand) GLOBAL_MALLOC(sizeof(struct sStepCommand));
+        self = (StepCommand) GLOBAL_MALLOC(sizeof(struct sStepCommand));
 
     if (self != NULL) {
         StepCommand_initialize(self);
@@ -4782,7 +4847,7 @@ SetpointCommandNormalized
 SetpointCommandNormalized_create(SetpointCommandNormalized self, int ioa, float value, bool selectCommand, int ql)
 {
     if (self == NULL)
-		self = (SetpointCommandNormalized) GLOBAL_MALLOC(sizeof(struct sSetpointCommandNormalized));
+        self = (SetpointCommandNormalized) GLOBAL_MALLOC(sizeof(struct sSetpointCommandNormalized));
 
     if (self) {
         SetpointCommandNormalized_initialize(self);
@@ -4831,7 +4896,7 @@ SetpointCommandNormalized_getFromBuffer(SetpointCommandNormalized self, CS101_Ap
         return NULL;
 
     if (self == NULL)
-		self = (SetpointCommandNormalized) GLOBAL_MALLOC(sizeof(struct sSetpointCommandNormalized));
+        self = (SetpointCommandNormalized) GLOBAL_MALLOC(sizeof(struct sSetpointCommandNormalized));
 
     if (self != NULL) {
         SetpointCommandNormalized_initialize(self);
@@ -5005,7 +5070,7 @@ SetpointCommandScaled
 SetpointCommandScaled_create(SetpointCommandScaled self, int ioa, int value, bool selectCommand, int ql)
 {
     if (self == NULL)
-		self = (SetpointCommandScaled) GLOBAL_MALLOC(sizeof(struct sSetpointCommandScaled));
+        self = (SetpointCommandScaled) GLOBAL_MALLOC(sizeof(struct sSetpointCommandScaled));
 
     if (self) {
         SetpointCommandScaled_initialize(self);
@@ -5050,7 +5115,7 @@ SetpointCommandScaled_getFromBuffer(SetpointCommandScaled self, CS101_AppLayerPa
         return NULL;
 
     if (self == NULL)
-		self = (SetpointCommandScaled) GLOBAL_MALLOC(sizeof(struct sSetpointCommandScaled));
+        self = (SetpointCommandScaled) GLOBAL_MALLOC(sizeof(struct sSetpointCommandScaled));
 
     if (self != NULL) {
         SetpointCommandScaled_initialize(self);
@@ -5232,7 +5297,7 @@ SetpointCommandShort
 SetpointCommandShort_create(SetpointCommandShort self, int ioa, float value, bool selectCommand, int ql)
 {
     if (self == NULL)
-		self = (SetpointCommandShort) GLOBAL_MALLOC(sizeof(struct sSetpointCommandShort));
+        self = (SetpointCommandShort) GLOBAL_MALLOC(sizeof(struct sSetpointCommandShort));
 
     if (self) {
         SetpointCommandShort_initialize(self);
@@ -5277,7 +5342,7 @@ SetpointCommandShort_getFromBuffer(SetpointCommandShort self, CS101_AppLayerPara
         return NULL;
 
     if (self == NULL)
-		self = (SetpointCommandShort) GLOBAL_MALLOC(sizeof(struct sSetpointCommandShort));
+        self = (SetpointCommandShort) GLOBAL_MALLOC(sizeof(struct sSetpointCommandShort));
 
     if (self != NULL) {
         SetpointCommandShort_initialize(self);
@@ -5475,7 +5540,7 @@ Bitstring32Command
 Bitstring32Command_create(Bitstring32Command self, int ioa, uint32_t value)
 {
     if (self == NULL)
-		self = (Bitstring32Command) GLOBAL_MALLOC(sizeof(struct sBitstring32Command));
+        self = (Bitstring32Command) GLOBAL_MALLOC(sizeof(struct sBitstring32Command));
 
     if (self) {
         Bitstring32Command_initialize(self);
@@ -5508,7 +5573,7 @@ Bitstring32Command_getFromBuffer(Bitstring32Command self, CS101_AppLayerParamete
         return NULL;
 
     if (self == NULL)
-		self = (Bitstring32Command) GLOBAL_MALLOC(sizeof(struct sBitstring32Command));
+        self = (Bitstring32Command) GLOBAL_MALLOC(sizeof(struct sBitstring32Command));
 
     if (self != NULL) {
         Bitstring32Command_initialize(self);
@@ -5676,7 +5741,7 @@ ReadCommand
 ReadCommand_create(ReadCommand self, int ioa)
 {
     if (self == NULL)
-		self = (ReadCommand) GLOBAL_MALLOC(sizeof(struct sReadCommand));
+        self = (ReadCommand) GLOBAL_MALLOC(sizeof(struct sReadCommand));
 
     if (self) {
         ReadCommand_initialize(self);
@@ -5702,7 +5767,7 @@ ReadCommand_getFromBuffer(ReadCommand self, CS101_AppLayerParameters parameters,
         return NULL;
 
     if (self == NULL)
-		self = (ReadCommand) GLOBAL_MALLOC(sizeof(struct sReadCommand));
+        self = (ReadCommand) GLOBAL_MALLOC(sizeof(struct sReadCommand));
 
     if (self != NULL) {
         ReadCommand_initialize(self);
@@ -5748,7 +5813,7 @@ ClockSynchronizationCommand
 ClockSynchronizationCommand_create(ClockSynchronizationCommand self, int ioa, CP56Time2a timestamp)
 {
     if (self == NULL)
-		self = (ClockSynchronizationCommand) GLOBAL_MALLOC(sizeof(struct sClockSynchronizationCommand));
+        self = (ClockSynchronizationCommand) GLOBAL_MALLOC(sizeof(struct sClockSynchronizationCommand));
 
     if (self) {
         ClockSynchronizationCommand_initialize(self);
@@ -5780,7 +5845,7 @@ ClockSynchronizationCommand_getFromBuffer(ClockSynchronizationCommand self, CS10
         return NULL;
 
     if (self == NULL)
-		self = (ClockSynchronizationCommand) GLOBAL_MALLOC(sizeof(struct sClockSynchronizationCommand));
+        self = (ClockSynchronizationCommand) GLOBAL_MALLOC(sizeof(struct sClockSynchronizationCommand));
 
     if (self != NULL) {
         ClockSynchronizationCommand_initialize(self);
@@ -5831,7 +5896,7 @@ InterrogationCommand
 InterrogationCommand_create(InterrogationCommand self, int ioa, uint8_t qoi)
 {
     if (self == NULL)
-		self = (InterrogationCommand) GLOBAL_MALLOC(sizeof(struct sInterrogationCommand));
+        self = (InterrogationCommand) GLOBAL_MALLOC(sizeof(struct sInterrogationCommand));
 
     if (self) {
         InterrogationCommand_initialize(self);
@@ -5864,7 +5929,7 @@ InterrogationCommand_getFromBuffer(InterrogationCommand self, CS101_AppLayerPara
         return NULL;
 
     if (self == NULL)
-		self = (InterrogationCommand) GLOBAL_MALLOC(sizeof(struct sInterrogationCommand));
+        self = (InterrogationCommand) GLOBAL_MALLOC(sizeof(struct sInterrogationCommand));
 
     if (self != NULL) {
         InterrogationCommand_initialize(self);
@@ -6818,25 +6883,25 @@ FileLastSegmentOrSection_create(FileLastSegmentOrSection self, int ioa, uint16_t
     return self;
 }
 
-uint16_t
+unsigned short//uint16_t
 FileLastSegmentOrSection_getNOF(FileLastSegmentOrSection self)
 {
     return self->nof;
 }
 
-uint8_t
+unsigned char//uint8_t
 FileLastSegmentOrSection_getNameOfSection(FileLastSegmentOrSection self)
 {
     return self->nameOfSection;
 }
 
-uint8_t
+unsigned char//uint8_t
 FileLastSegmentOrSection_getLSQ(FileLastSegmentOrSection self)
 {
     return self->lsq;
 }
 
-uint8_t
+unsigned char//uint8_t
 FileLastSegmentOrSection_getCHS(FileLastSegmentOrSection self)
 {
     return self->chs;
@@ -7257,6 +7322,614 @@ FileDirectory_getFromBuffer(FileDirectory self, CS101_AppLayerParameters paramet
     }
 
     return self;
+}
+
+//远程参数读写
+//<200>：= 切换定值区 C_SR_NA_1
+//<201>：= 读定值区号 C_RR_NA_1
+//<202>：= 读参数和定值 C_RS_NA_1
+//<203>：= 写参数和定值 C_WS_NA_1
+
+/*************************************************
+ * RemoteReposition: InformationObject  C_SR_NA_1=200
+ * 远方切换定值区 signal remote reposition
+ *************************************************/
+static bool
+RemoteReposition_encode(RemoteReposition self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    int size = isSequence ? 1 : (parameters->sizeOfIOA + 1);
+
+    if (Frame_getSpaceLeft(frame) < size)
+        return false;
+
+    InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+
+    Frame_setNextByte (frame, (uint8_t)(self->SN % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->SN / 0x100) % 0x100));
+
+    return true;
+}
+
+struct sInformationObjectVFT RemoteRepositionVFT = {
+        (EncodeFunction) RemoteReposition_encode,
+        (DestroyFunction) RemoteReposition_destroy
+};
+
+static void
+RemoteReposition_initialize(RemoteReposition self)
+{
+    self->virtualFunctionTable = &(RemoteRepositionVFT);
+    self->type = C_SR_NA_1;
+}
+
+RemoteReposition
+RemoteReposition_create(RemoteReposition self, int ioa, uint16_t sn)//切换定值区
+{
+    if (self == NULL)
+        self = (RemoteReposition) GLOBAL_MALLOC(sizeof(struct sRemoteReposition));
+
+    if (self != NULL) {
+        RemoteReposition_initialize(self);
+
+        self->objectAddress = ioa;
+        self->SN = sn;
+
+    }
+
+    return self;
+}
+
+void
+RemoteReposition_destroy(RemoteReposition self)
+{
+    GLOBAL_FREEMEM(self);
+}
+
+RemoteReposition
+RemoteReposition_getFromBuffer(RemoteReposition self, CS101_AppLayerParameters parameters,
+        uint8_t* msg, int msgSize, int startIndex, bool isSequence)
+{
+    if (self == NULL)
+       self = (RemoteReposition) GLOBAL_MALLOC(sizeof(struct sRemoteReposition));
+
+    if (self != NULL) {
+
+        RemoteReposition_initialize(self);
+
+        if (!isSequence) {
+            InformationObject_getFromBuffer((InformationObject) self, parameters, msg, startIndex);
+
+            startIndex += parameters->sizeOfIOA; /* skip IOA */
+        }
+
+        self->SN = msg[startIndex++];
+        self->SN += (msg[startIndex++] * 0x100);
+    }
+
+    return self;
+}
+
+/*************************************************
+ * RemoteReadSN: InformationObject  C_RR_NA_1=201
+ * 读定值区号 SN
+ *************************************************/
+static bool
+RemoteReadSN_encode(RemoteReposition self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    int size = isSequence ? 1 : (parameters->sizeOfIOA + 1);
+
+    if (Frame_getSpaceLeft(frame) < size)
+        return false;
+
+    InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+
+
+
+    return true;
+}
+
+struct sInformationObjectVFT RemoteReadSNVFT = {
+        (EncodeFunction) RemoteReadSN_encode,
+        (DestroyFunction) RemoteReadSN_destroy
+};
+
+static void
+RemoteReadSN_initialize(RemoteReadSN self)
+{
+    self->virtualFunctionTable = &(RemoteReadSNVFT);
+    self->type = C_RR_NA_1;
+}
+
+RemoteReadSN
+RemoteReadSN_create(RemoteReadSN self, int ioa)//读当前定值区号
+{
+    if (self == NULL)
+        self = (RemoteReadSN) GLOBAL_MALLOC(sizeof(struct sRemoteReadSN));
+
+    if (self != NULL) {
+        RemoteReadSN_initialize(self);
+
+        self->objectAddress = ioa;
+
+    }
+
+    return self;
+}
+
+void
+RemoteReadSN_destroy(RemoteReadSN self)
+{
+    GLOBAL_FREEMEM(self);
+}
+
+RemoteReadSN
+RemoteReadSN_getFromBuffer(RemoteReadSN self, CS101_AppLayerParameters parameters,
+        uint8_t* msg, int msgSize, int startIndex, bool isSequence)
+{
+    if (self == NULL)
+       self = (RemoteReadSN) GLOBAL_MALLOC(sizeof(struct sRemoteReadSN));
+
+    if (self != NULL) {
+
+        RemoteReadSN_initialize(self);
+
+        if (!isSequence) {
+            InformationObject_getFromBuffer((InformationObject) self, parameters, msg, startIndex);
+
+            startIndex += parameters->sizeOfIOA; /* skip IOA */
+        }
+
+//        信息体地址（0）  3 字节
+//        当前定值区区号 SN1  2 字节
+//        终端支持的最小定值区号 SN2  2 字节
+//        终端支持的最大定值区号 SN3  7 字节
+        self->SN1 = msg[startIndex++];
+        self->SN1 += (msg[startIndex++] * 0x100);
+
+        self->SN2 = msg[startIndex++];
+        self->SN2 += (msg[startIndex++] * 0x100);
+
+        self->SN3 = msg[startIndex++];//7字节？？
+        self->SN3 += (msg[startIndex++] * 0x100);
+        self->SN3 += (msg [startIndex++] * 0x10000);
+        self->SN3 += (msg [startIndex++] * 0x1000000);
+
+    }
+
+    return self;
+}
+
+int16_t//int
+RemoteReadSN_getSN1(RemoteReadSN self)
+{
+    return self->SN1;
+}
+
+int16_t//int
+RemoteReadSN_getSN2(RemoteReadSN self)
+{
+    return self->SN2;
+}
+
+int64_t//long
+RemoteReadSN_getSN3(RemoteReadSN self)
+{
+    return self->SN3;
+}
+
+/*************************************************
+ * ParamValue_Read: InformationObject  C_RS_NA_1=202
+ * 读参数和定值
+ *************************************************/
+static bool
+ParamValue_Read_encode(ParamValue_Read self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    int size = isSequence ? 1 : (parameters->sizeOfIOA + 1);
+
+    if (Frame_getSpaceLeft(frame) < size)
+        return false;
+
+    //InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+
+//        Frame_setNextByte(frame, (uint8_t)(self->infoaddr & 0xff));
+//        Frame_setNextByte(frame, (uint8_t)((self->infoaddr / 0x100) & 0xff));
+//        Frame_setNextByte(frame, (uint8_t)((self->infoaddr / 0x10000) & 0xff));
+
+
+
+
+//    //定值区号SN
+//    Frame_setNextByte(frame, (uint8_t) ((self->SN) & 0xff));
+//    Frame_setNextByte(frame, (uint8_t) (((self->SN) / 0x100) & 0xff));
+
+    if(self->__sParamRead.paramNums>0&&self->__sParamRead.paramNums<=1024)
+    {
+        int i=0;
+        for(i=0;i<self->__sParamRead.paramNums;i++)
+        {
+            //固有参数信息体地址从0x8001开始编码至0x801F
+            //运行参数信息体地址定义为0x8020至0x821F
+            //动作参数信息体地址定义为0x8220至0x85EF
+            if(self->infoaddr[i]>=0x8001 && self->infoaddr[i] <= 0x85EF)
+            {
+                Frame_setNextByte(frame, (uint8_t)(self->infoaddr[i] & 0xff));
+                Frame_setNextByte(frame, (uint8_t)((self->infoaddr[i] / 0x100) & 0xff));
+                Frame_setNextByte(frame, (uint8_t)((self->infoaddr[i] / 0x10000) & 0xff));
+            }
+
+        }
+    }
+
+    return true;
+}
+
+struct sInformationObjectVFT ParamValue_ReadVFT = {
+        (EncodeFunction) ParamValue_Read_encode,
+        (DestroyFunction) ParamValue_Read_destroy
+};
+
+static void
+ParamValue_Read_initialize(ParamValue_Read self)
+{
+    self->virtualFunctionTable = &(ParamValue_ReadVFT);
+    self->type = C_RS_NA_1;
+}
+
+ParamValue_Read
+ParamValue_Read_create(ParamValue_Read self, int ioa_index)//int sn, ParamRead paramRead ParamRead读参数和定值int ioa
+{
+    if (self == NULL)
+    {
+        self = (ParamValue_Read) GLOBAL_MALLOC(sizeof(struct sParamValue_Read));
+        self->__sParamRead.paramNums = 0;
+    }
+
+    if (self != NULL) {
+        ParamValue_Read_initialize(self);
+
+        //self->objectAddress = ioa_index;
+        //self->infoaddr = ioa_index;
+
+        self->infoaddr[self->__sParamRead.paramNums] = ioa_index;
+        self->__sParamRead.structParamRead[self->__sParamRead.paramNums].informationAddr = 0;
+        self->__sParamRead.structParamRead[self->__sParamRead.paramNums].tagType =0;
+        self->__sParamRead.structParamRead[self->__sParamRead.paramNums].datalen=0;
+
+        self->__sParamRead.paramNums++;
+
+
+//        int i=0;
+//        for(i=0;i<1024;i++)//self->__sParamRead->paramNums
+//        {
+//            self->__sParamRead.structParamRead[i].informationAddr = 0;
+//            self->__sParamRead.structParamRead[i].tagType =0;
+//            self->__sParamRead.structParamRead[i].datalen=0;
+//            //self->__sParamRead->structParamRead[i].datavalue=0;
+//        }
+//        //self->structParamRead[index].informationAddr = ioa_index;
+
+    }
+
+    return self;
+}
+
+void
+ParamValue_Read_destroy(ParamValue_Read self)
+{
+    GLOBAL_FREEMEM(self);
+}
+
+ParamValue_Read
+ParamValue_Read_getFromBuffer(ParamValue_Read self, CS101_AppLayerParameters parameters,
+        uint8_t* msg, int msgSize, int startIndex, bool isSequence,int nums)
+{
+    if (self == NULL)
+       self = (ParamValue_Read) GLOBAL_MALLOC(sizeof(struct sParamValue_Read));
+
+    if (self != NULL) {
+
+        ParamValue_Read_initialize(self);
+
+//        if (!isSequence) {
+//            InformationObject_getFromBuffer((InformationObject) self, parameters, msg, startIndex);
+
+//            startIndex += parameters->sizeOfIOA; /* skip IOA */
+//        }
+
+//        定值区号 SN  2 字节
+//        参数特征标识  1 字节
+//        信息体地址 1  3 字节
+//        Tag 类型  1 字节
+//        数据长度  1 字节
+//        值  由数据长度决定
+//        …
+        self->SN = msg[startIndex++];
+        self->SN += (msg[startIndex++] * 0x100);
+
+        self->paramTI = msg[startIndex++];  //
+
+        self->__sParamRead.paramNums = nums;
+
+        int i=0;
+        for(i=0;i<nums;i++)
+        {
+            self->__sParamRead.structParamRead[i].informationAddr = msg[startIndex++];//3字节
+            self->__sParamRead.structParamRead[i].informationAddr += (msg[startIndex++] * 0x100);
+            self->__sParamRead.structParamRead[i].informationAddr += (msg [startIndex++] * 0x10000);
+
+            self->__sParamRead.structParamRead[i].tagType = msg[startIndex++];//1字节
+
+            self->__sParamRead.structParamRead[i].datalen = msg[startIndex++];//1字节
+            for(int k=0;k<self->__sParamRead.structParamRead[i].datalen;k++)
+            {
+                self->__sParamRead.structParamRead[i].datavalue[k] = msg[startIndex++];
+            }
+
+
+        }
+
+    }
+
+    return self;
+}
+
+int8_t//int
+ParamValue_Read_getSN(ParamValue_Read self)
+{
+    return self->SN;
+}
+
+int
+ParamValue_Read_getParamReadnum(ParamValue_Read self)
+{
+    return self->__sParamRead.paramNums;
+}
+//struct _sParamRead{
+//    int informationAddr;//信息体地址  3 字节
+//    uint8_t tagType;//Tag 类型  1 字节
+//    uint8_t datalen;//数据长度  1 字节
+//    char datavalue[128];//数据值  由数据长度决定
+
+//};
+int
+ParamValue_Read_getParamReadinfoaddr(ParamValue_Read self,int index)
+{
+    if(index<self->__sParamRead.paramNums)
+        return self->__sParamRead.structParamRead[index].informationAddr;
+    else
+        return -1;
+}
+
+int
+ParamValue_Read_getParamReadtagtype(ParamValue_Read self,int index)
+{
+    if(index<self->__sParamRead.paramNums)
+        return self->__sParamRead.structParamRead[index].tagType;
+    else
+        return -1;
+}
+
+int
+ParamValue_Read_getParamReaddatalen(ParamValue_Read self,int index)
+{
+    if(index<self->__sParamRead.paramNums)
+        return self->__sParamRead.structParamRead[index].datalen;
+    else
+        return -1;
+}
+
+char*
+ParamValue_Read_getParamReaddatavalue(ParamValue_Read self,int index)
+{
+    if(index<self->__sParamRead.paramNums)
+        return (char*)(self->__sParamRead.structParamRead[index].datavalue);
+    else
+        return NULL;
+}
+
+/*************************************************
+ * ParamValue_Write: InformationObject  C_WS_NA_1=203
+ * 写参数和定值
+ *************************************************/
+static bool
+ParamValue_Write_encode(ParamValue_Write self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    int size = isSequence ? 1 : (parameters->sizeOfIOA + 1);
+
+    if (Frame_getSpaceLeft(frame) < size)
+        return false;
+
+
+    if(self->paramNums>0&&self->paramNums<=1024)
+    {
+        int i=0;
+        for(i=0;i<self->paramNums;i++)
+        {
+            //固有参数信息体地址从0x8001开始编码至0x801F
+            //运行参数信息体地址定义为0x8020至0x821F
+            //动作参数信息体地址定义为0x8220至0x85EF
+            if(self->structParamWrite[i].informationAddr>=0x8001 && self->structParamWrite[i].informationAddr <= 0x85EF)
+            {
+                //信息体地址 1  3 字节
+                Frame_setNextByte(frame, (uint8_t)(self->structParamWrite[i].informationAddr & 0xff));
+                Frame_setNextByte(frame, (uint8_t)((self->structParamWrite[i].informationAddr / 0x100) & 0xff));
+                Frame_setNextByte(frame, (uint8_t)((self->structParamWrite[i].informationAddr / 0x10000) & 0xff));
+                //Tag 类型  1 字节
+                Frame_setNextByte(frame,(uint8_t)(self->structParamWrite[i].tagType));
+                //数据长度  1 字节
+                //值  由数据长度决定
+                int temp_datalen = (uint8_t)(self->structParamWrite[i].datalen);
+                Frame_setNextByte(frame,temp_datalen);
+                for(int j=0;j<temp_datalen;j++)
+                {
+                    Frame_setNextByte(frame,(uint8_t)(self->structParamWrite[i].datavalue[j]));
+                }
+            }
+
+        }
+    }
+
+    return true;
+}
+
+struct sInformationObjectVFT ParamValue_WriteVFT = {
+        (EncodeFunction) ParamValue_Write_encode,
+        (DestroyFunction) ParamValue_Write_destroy
+};
+
+static void
+ParamValue_Write_initialize(ParamValue_Write self)
+{
+    self->virtualFunctionTable = &(ParamValue_WriteVFT);
+    self->type = C_WS_NA_1;
+}
+
+ParamValue_Write
+ParamValue_Write_create(ParamValue_Write self, int ioa_index,int tag_index,int datalen,char* datavalue)//int sn, ParamRead paramRead ParamRead读参数和定值int ioa
+{
+    if (self == NULL)
+    {
+        self = (ParamValue_Write) GLOBAL_MALLOC(sizeof(struct sParamValue_Write));
+        self->paramNums = 0;
+    }
+
+    if (self != NULL) {
+        ParamValue_Write_initialize(self);
+
+        //self->objectAddress = ioa_index;
+        //self->infoaddr = ioa_index;
+
+        if(ioa_index>=0x8001 && ioa_index<=0x85EF)
+        {
+            self->structParamWrite[self->paramNums].informationAddr = ioa_index;
+            self->structParamWrite[self->paramNums].tagType =tag_index;
+            self->structParamWrite[self->paramNums].datalen=datalen;
+
+            for(int k=0;k<datalen;k++)
+            {
+                self->structParamWrite[self->paramNums].datavalue[k]=datavalue[k];
+            }
+
+            self->paramNums++;
+        }
+
+    }
+
+    return self;
+}
+
+void
+ParamValue_Write_destroy(ParamValue_Write self)
+{
+    GLOBAL_FREEMEM(self);
+}
+
+ParamValue_Write
+ParamValue_Write_getFromBuffer(ParamValue_Write self, CS101_AppLayerParameters parameters,
+        uint8_t* msg, int msgSize, int startIndex, bool isSequence,int nums)
+{
+    if (self == NULL)
+       self = (ParamValue_Write) GLOBAL_MALLOC(sizeof(struct sParamValue_Write));
+
+    if (self != NULL) {
+
+        ParamValue_Write_initialize(self);
+
+//        if (!isSequence) {
+//            InformationObject_getFromBuffer((InformationObject) self, parameters, msg, startIndex);
+
+//            startIndex += parameters->sizeOfIOA; /* skip IOA */
+//        }
+
+//        定值区号 SN  2 字节
+//        参数特征标识  1 字节
+//        信息体地址 1  3 字节
+//        Tag 类型  1 字节
+//        数据长度  1 字节
+//        值  由数据长度决定
+//        …
+        self->SN = msg[startIndex++];
+        self->SN += (msg[startIndex++] * 0x100);
+
+        self->paramTI = msg[startIndex++];  //
+
+        self->paramNums = nums;
+
+        int i=0;
+        for(i=0;i<nums;i++)
+        {
+            self->structParamWrite[i].informationAddr = msg[startIndex++];//3字节
+            self->structParamWrite[i].informationAddr += (msg[startIndex++] * 0x100);
+            self->structParamWrite[i].informationAddr += (msg [startIndex++] * 0x10000);
+
+            self->structParamWrite[i].tagType = msg[startIndex++];//1字节
+
+            self->structParamWrite[i].datalen = msg[startIndex++];//1字节
+            for(int k=0;k<self->structParamWrite[i].datalen;k++)
+            {
+                self->structParamWrite[i].datavalue[k] = msg[startIndex++];
+            }
+
+
+        }
+
+    }
+
+    return self;
+}
+
+unsigned char
+ParamValue_Write_getParamTI(ParamValue_Write self)
+{
+    return self->paramTI;
+}
+
+unsigned char
+ParamValue_Write_getSN(ParamValue_Write self)
+{
+    return self->SN;
+}
+
+unsigned char
+ParamValue_Write_getParamWritenum(ParamValue_Write self)
+{
+    return self->paramNums;
+}
+
+int
+ParamValue_Write_getParamWriteinfoaddr(ParamValue_Write self,int index)
+{
+    if(index<self->paramNums)
+        return self->structParamWrite[index].informationAddr;
+    else
+        return -1;
+}
+
+unsigned char
+ParamValue_Write_getParamWritetagtype(ParamValue_Write self,int index)
+{
+    if(index<self->paramNums)
+        return self->structParamWrite[index].tagType;
+    else
+        return -1;
+}
+
+unsigned char
+ParamValue_Write_getParamWritedatalen(ParamValue_Write self,int index)
+{
+    if(index<self->paramNums)
+        return self->structParamWrite[index].datalen;
+    else
+        return -1;
+}
+
+char*
+ParamValue_Write_getParamWritedatavalue(ParamValue_Write self,int index)
+{
+    if(index<self->paramNums)
+        return (char*)(self->structParamWrite[index].datavalue);
+    else
+        return NULL;
 }
 
 
