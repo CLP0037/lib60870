@@ -294,7 +294,13 @@ typedef enum {
     CS101_COT_UNKNOWN_TYPE_ID = 44,
     CS101_COT_UNKNOWN_COT = 45,
     CS101_COT_UNKNOWN_CA = 46,
-    CS101_COT_UNKNOWN_IOA = 47
+    CS101_COT_UNKNOWN_IOA = 47,
+    //    <48>∶＝遥控执行软压板状态错误
+    //    <49> ∶＝遥控执行时间戳错误
+    //    <50> ∶＝遥控执行数字签名认证错误
+    CS101_COT_YK_SPSTATE_ERROR = 48,
+    CS101_COT_YK_TIMESTAMP_ERROR = 49,
+    CS101_COT_YK_SIGNATURE_ERROR = 50
 } CS101_CauseOfTransmission;
 
 const char*

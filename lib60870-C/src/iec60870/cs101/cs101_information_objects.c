@@ -1353,10 +1353,10 @@ FaultEventWithCP56Time2a_getFromBuffer(FaultEventWithCP56Time2a self, CS101_AppL
     if (self != NULL) {
         FaultEventWithCP56Time2a_initialize(self);
 
-        if (!isSequence) {
-            InformationObject_getFromBuffer((InformationObject) self, parameters, msg, startIndex);
-            startIndex += parameters->sizeOfIOA; /* skip IOA */
-        }
+//        if (!isSequence) {
+//            InformationObject_getFromBuffer((InformationObject) self, parameters, msg, startIndex);
+//            startIndex += parameters->sizeOfIOA; /* skip IOA */
+//        }
 
         //YX
         self->num_YX = msg [startIndex++];//带时标遥信个数

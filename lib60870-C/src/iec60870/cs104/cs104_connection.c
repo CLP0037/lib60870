@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2016 MZ Automation GmbH
  *
  *  This file is part of lib60870-C
@@ -482,7 +482,7 @@ receiveMessage(CS104_Connection self, uint8_t* buffer)
 
 
 static bool
-checkConfirmTimeout(CS104_Connection self, long currentTime)
+checkConfirmTimeout(CS104_Connection self, uint64_t currentTime)//long
 {
     if ((currentTime - self->lastConfirmationTime) >= (uint32_t) (self->parameters.t2 * 1000))
         return true;
@@ -608,16 +608,18 @@ handleTimeouts(CS104_Connection self)
         }
     }
 
-    if (self->unconfirmedReceivedIMessages > 0) {
+    //t2  10s  无数据报文时确认的超时，t2<t1  ==========
+//    if (self->unconfirmedReceivedIMessages > 0) {
 
-        if (checkConfirmTimeout(self, currentTime)) {
+//        if (checkConfirmTimeout(self, currentTime)) {
 
-            self->lastConfirmationTime = currentTime;
-            self->unconfirmedReceivedIMessages = 0;
+//            self->lastConfirmationTime = currentTime;
+//            self->unconfirmedReceivedIMessages = 0;
 
-            sendSMessage(self); /* send confirmation message */
-        }
-    }
+//            sendSMessage(self); /* send confirmation message */
+//        }
+//    }
+
 
     if (self->uMessageTimeout != 0) {
         if (currentTime > self->uMessageTimeout) {
@@ -628,13 +630,14 @@ handleTimeouts(CS104_Connection self)
     }
 
     /* check if counterpart confirmed I messages */
+    //t1  15s  发送或测试 APDU 的超时  ==========
 #if (CONFIG_USE_THREADS == 1)
     Semaphore_wait(self->sentASDUsLock);
 #endif
     if (self->oldestSentASDU != -1) {
         if ((currentTime - self->sentASDUs[self->oldestSentASDU].sentTime) >= (uint64_t) (self->parameters.t1 * 1000)) {
             DEBUG_PRINT("I message timeout\n");
-            retVal = false;
+            //retVal = false;
         }
     }
 #if (CONFIG_USE_THREADS == 1)

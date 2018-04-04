@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+﻿cmake_minimum_required(VERSION 2.8)
 
 # automagically detect if we should cross-compile
 if(DEFINED ENV{TOOLCHAIN})
@@ -6,6 +6,8 @@ if(DEFINED ENV{TOOLCHAIN})
 	set(CMAKE_CXX_COMPILER	$ENV{TOOLCHAIN}g++)
 	set(CMAKE_AR	"$ENV{TOOLCHAIN}ar" CACHE FILEPATH "CW archiver" FORCE)
 endif()
+
+find_package(Qt5Core)
 
 project(lib60870-C)
 ENABLE_TESTING()

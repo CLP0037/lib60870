@@ -1637,6 +1637,16 @@ CS101_CauseOfTransmission_toString(CS101_CauseOfTransmission self)
         return "UNKNOWN_COMMON_ADDRESS_OF_ASDU";
     case CS101_COT_UNKNOWN_IOA:
         return "UNKNOWN_INFORMATION_OBJECT_ADDRESS";
+    //    <48>∶＝遥控执行软压板状态错误
+    //    <49> ∶＝遥控执行时间戳错误
+    //    <50> ∶＝遥控执行数字签名认证错误
+    case CS101_COT_YK_SPSTATE_ERROR:
+        return "CS101_COT_YK_SPSTATE_ERROR";
+    case CS101_COT_YK_TIMESTAMP_ERROR:
+        return "CS101_COT_YK_TIMESTAMP_ERROR";
+    case CS101_COT_YK_SIGNATURE_ERROR:
+        return "CS101_COT_YK_SIGNATURE_ERROR";
+
     default:
         return "UNKNOWN_COT";
     }
