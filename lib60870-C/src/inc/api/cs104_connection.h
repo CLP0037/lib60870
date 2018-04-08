@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2016-2018 MZ Automation GmbH
  *
  *  This file is part of lib60870-C
@@ -296,6 +296,10 @@ CS104_Connection_sendASDU(CS104_Connection self, CS101_ASDU asdu);
 void
 CS104_Connection_setASDUReceivedHandler(CS104_Connection self, CS101_ASDUReceivedHandler handler, void* parameter);
 
+void
+CS104_Connection_setMSGReceivedHandler(CS104_Connection self, CS104_MSGReceivedHandler handler, void* parameter);
+void
+CS104_Connection_setMSGSendHandler(CS104_Connection self, CS104_MSGSendHandler handler, void* parameter);
 
 typedef enum {
     CS104_CONNECTION_OPENED = 0,

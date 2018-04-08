@@ -112,6 +112,13 @@ struct sCS104_Connection {
 
     CS104_ConnectionHandler connectionHandler;
     void* connectionHandlerParameter;
+
+
+    CS104_MSGReceivedHandler msgreceivedHandler;
+    void* msgreceivedHandlerParameter;
+
+    CS104_MSGSendHandler msgsendHandler;
+    void* msgsendHandlerParameter;
 };
 
 
@@ -133,6 +140,11 @@ static uint8_t STARTDT_CON_MSG[] = { 0x68, 0x04, 0x0b, 0x00, 0x00, 0x00 };
 static inline int
 writeToSocket(CS104_Connection self, uint8_t* buf, int size)
 {
+    if (size > 0) {
+        if (self->msgsendHandler != NULL)
+            self->msgsendHandler(self->msgreceivedHandlerParameter, buf, size);
+
+    }
 #if (CONFIG_CS104_SUPPORT_TLS == 1)
     if (self->tlsSocket)
         return TLSSocket_write(self->tlsSocket, buf, size);
@@ -192,6 +204,10 @@ createConnection(const char* hostname, int tcpPort)
         self->connectionHandler = NULL;
         self->connectionHandlerParameter = NULL;
 
+        self->msgreceivedHandler = NULL;
+        self->msgreceivedHandlerParameter = NULL;
+        self->msgsendHandler = NULL;
+        self->msgsendHandlerParameter = NULL;
 #if (CONFIG_USE_THREADS == 1)
         self->sentASDUsLock = Semaphore_create(1);
         self->connectionHandlingThread = NULL;
@@ -493,6 +509,12 @@ checkConfirmTimeout(CS104_Connection self, uint64_t currentTime)//long
 static bool
 checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
 {
+    if (msgSize > 0) {
+        if (self->msgreceivedHandler != NULL)
+            self->msgreceivedHandler(self->msgreceivedHandlerParameter, buffer, msgSize);
+
+    }
+
     if ((buffer[2] & 1) == 0) { /* I format frame */
 
         if (self->firstIMessageReceived == false) {
@@ -781,6 +803,20 @@ CS104_Connection_setASDUReceivedHandler(CS104_Connection self, CS101_ASDUReceive
 {
     self->receivedHandler = handler;
     self->receivedHandlerParameter = parameter;
+}
+
+void
+CS104_Connection_setMSGReceivedHandler(CS104_Connection self, CS104_MSGReceivedHandler handler, void* parameter)
+{
+    self->msgreceivedHandler = handler;
+    self->msgreceivedHandlerParameter = parameter;
+}
+
+void
+CS104_Connection_setMSGSendHandler(CS104_Connection self, CS104_MSGSendHandler handler, void* parameter)
+{
+    self->msgsendHandler = handler;
+    self->msgsendHandlerParameter = parameter;
 }
 
 void

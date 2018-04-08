@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2016 MZ Automation GmbH
  *
  *  This file is part of lib60870-C
@@ -47,5 +47,11 @@
  * \return true if the ASDU has been handled by the callback, false otherwise
  */
 typedef bool (*CS101_ASDUReceivedHandler) (void* parameter, int address, CS101_ASDU asdu);
+
+//CS104_MSGReceivedHandler
+typedef bool (*CS104_MSGReceivedHandler) (void* parameter, uint8_t* buffer, int msgSize);//, CS101_ASDU asdu
+
+//CS104_MSGSendHandler
+typedef bool (*CS104_MSGSendHandler) (void* parameter, uint8_t* buffer, int msgSize);//, CS101_ASDU asdu
 
 #endif /* SRC_IEC60870_MASTER_H_ */
