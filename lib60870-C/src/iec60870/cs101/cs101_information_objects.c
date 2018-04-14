@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2016 MZ Automation GmbH
  *
  *  This file is part of lib60870-C
@@ -7663,6 +7663,10 @@ ParamValue_Read_getFromBuffer(ParamValue_Read self, CS101_AppLayerParameters par
             for(int k=0;k<self->__sParamRead.structParamRead[i].datalen;k++)
             {
                 self->__sParamRead.structParamRead[i].datavalue[k] = msg[startIndex++];
+                if(self->__sParamRead.structParamRead[i].datavalue[k] >=128)//若
+                {
+                    self->__sParamRead.structParamRead[i].datavalue[k]=0;
+                }
             }
 
 
@@ -7785,7 +7789,7 @@ ParamValue_Write_initialize(ParamValue_Write self)
 }
 
 ParamValue_Write
-ParamValue_Write_create(ParamValue_Write self, int ioa_index,int tag_index,int datalen,char* datavalue)//int sn, ParamRead paramRead ParamRead读参数和定值int ioa
+ParamValue_Write_create(ParamValue_Write self, int ioa_index,int tag_index,int datalen,unsigned char* datavalue)//int sn, ParamRead paramRead ParamRead读参数和定值int ioa
 {
     if (self == NULL)
     {

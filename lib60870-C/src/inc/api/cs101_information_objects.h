@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2016 MZ Automation GmbH
  *
  *  This file is part of lib60870-C
@@ -1875,7 +1875,7 @@ ParamValue_Read_getParamReaddatavalue(ParamValue_Read self,int index);
 typedef struct sParamValue_Write* ParamValue_Write;
 
 ParamValue_Write
-ParamValue_Write_create(ParamValue_Write self, int ioa_index,int tag_index,int datalen,char* datavalue);//int sn, ParamRead paramRead ParamRead读参数和定值int ioa
+ParamValue_Write_create(ParamValue_Write self, int ioa_index,int tag_index,int datalen,unsigned char* datavalue);//int sn, ParamRead paramRead ParamRead读参数和定值int ioa
 //ParamValue_Write_create(ParamValue_Write self, int ioa, uint16_t sn,uint8_t param_TI,uint8_t Tag_type,uint8_t data_len,char* data_value);//可变帧长限定词 VSQ有效
 
 void

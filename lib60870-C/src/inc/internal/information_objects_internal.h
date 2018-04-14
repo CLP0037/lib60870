@@ -1,4 +1,4 @@
-/*
+﻿/*
  * information_objects_internal.h
  *
  *  Created on: Aug 5, 2016
@@ -1234,7 +1234,7 @@ struct _sParamRead{
     int informationAddr;//信息体地址  3 字节
     uint8_t tagType;//Tag 类型  1 字节
     uint8_t datalen;//数据长度  1 字节
-    char datavalue[128];//数据值  由数据长度决定
+    unsigned char datavalue[128];//数据值  由数据长度决定
 
 };
 
@@ -1260,7 +1260,7 @@ struct sParamWrite{
     int informationAddr;//信息体地址  3 字节
     uint8_t tagType;//Tag 类型  1 字节
     uint8_t datalen;//数据长度  1 字节
-    char datavalue[128];//数据值  由数据长度决定
+    unsigned char datavalue[128];//数据值  由数据长度决定
 
 };
 struct sParamValue_Write{//203==写参数和定值
