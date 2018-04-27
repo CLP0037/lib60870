@@ -16,7 +16,34 @@ set(LIB_VERSION_MAJOR "2")
 set(LIB_VERSION_MINOR "0")
 set(LIB_VERSION_PATCH "0")
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/third_party/cmake/modules/")
+
+#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/third_party/cmake/modules/")
+
+## Appends the cmake/modules path to MAKE_MODULE_PATH variable.
+#${CMAKE_CURRENT_SOURCE_DIR} : CMakeLists.txt所在路径
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules ${CMAKE_MODULE_PATH})
+
+include(GetGitRevisionDescription)
+git_describe(VERSION --tags --dirty=-d)
+
+###parse the version information into pieces.
+#VERSION ~= s/\.[a-f0-9]{5,}//
+#GIT_VERSION ~= s/-/"."
+#GIT_VERSION ~= s/g/""
+#VERSION ~= s/\.[a-f0-9]{5,}
+STRING( REPLACE "-" "." VERSION ${VERSION})
+STRING( REPLACE "g" "" VERSION ${VERSION})
+#STRING( REPLACE "g" "" VERSION ${VERSION})
+MESSAGE(VERSION)
+
+string(REGEX REPLACE "^v([a-f0-9]+)\\..*" "\\1" LIB_VERSION_MAJOR "${VERSION}")
+string(REGEX REPLACE "^v[a-f0-9]+\\.([a-f0-9]+).*" "\\1" LIB_VERSION_MINOR "${VERSION}")
+string(REGEX REPLACE "^v[a-f0-9]+\\.[a-f0-9]+\\.([a-f0-9]+).*" "\\1" LIB_VERSION_PATCH "${VERSION}")
+string(REGEX REPLACE "^v[a-f0-9]+\\.[a-f0-9]+\\.[a-f0-9]+.([a-f0-9]+).*" "\\1" LIB_VERSION_SHA1 "${VERSION}")
+#set(VERSION "${LIB_VERSION_MAJOR}.${LIB_VERSION_MINOR}.${LIB_VERSION_PATCH}.${LIB_VERSION_SHA1}")
+set(VERSION "${LIB_VERSION_MAJOR}.${LIB_VERSION_MINOR}.${LIB_VERSION_PATCH}.${LIB_VERSION_SHA1}")
+MESSAGE(VERSION)
+
 
 macro(ADD_C_FLAGS flags)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${flags}")
