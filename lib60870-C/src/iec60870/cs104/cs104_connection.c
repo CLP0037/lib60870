@@ -994,6 +994,20 @@ CS104_Connection_sendClockSyncCommand(CS104_Connection self, int ca, CP56Time2a 
     return sendASDUInternal(self, frame);
 }
 
+bool
+CS104_Connection_sendClockSyncCommand_read(CS104_Connection self, int ca, CP56Time2a time)
+{
+    Frame frame = (Frame) T104Frame_create();
+
+    encodeIdentificationField(self, frame, C_CS_NA_1, 1, CS101_COT_REQUEST, ca);//CS101_COT_ACTIVATION
+
+    encodeIOA(self, frame, 0);
+
+    T104Frame_appendBytes(frame, CP56Time2a_getEncodedValue(time), 7);
+
+    return sendASDUInternal(self, frame);
+}
+
 //测试命令   C_TS_NA_1=104
 
 bool
