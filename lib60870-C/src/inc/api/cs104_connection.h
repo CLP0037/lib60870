@@ -221,7 +221,7 @@ CS104_Connection_sendReadCommand(CS104_Connection self, int ca, int ioa);
 bool
 CS104_Connection_sendClockSyncCommand(CS104_Connection self, int ca, CP56Time2a time);
 bool
-CS104_Connection_sendClockSyncCommand_read(CS104_Connection self, int ca, CP56Time2a time);
+CS104_Connection_sendClockSyncCommand_SetandRead(CS104_Connection self, int ca, int cot,unsigned char* time);
 /**
  * \brief Send a test command (C_TS_NA_1 typeID: 104)
  *

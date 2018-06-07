@@ -994,16 +994,21 @@ CS104_Connection_sendClockSyncCommand(CS104_Connection self, int ca, CP56Time2a 
     return sendASDUInternal(self, frame);
 }
 
-bool
-CS104_Connection_sendClockSyncCommand_read(CS104_Connection self, int ca, CP56Time2a time)
+bool //selfdefined
+CS104_Connection_sendClockSyncCommand_SetandRead(CS104_Connection self, int ca, int cot,unsigned char* time)
 {
     Frame frame = (Frame) T104Frame_create();
 
-    encodeIdentificationField(self, frame, C_CS_NA_1, 1, CS101_COT_REQUEST, ca);//CS101_COT_ACTIVATION
+    if(cot==5)
+        encodeIdentificationField(self, frame, C_CS_NA_1, 1, CS101_COT_REQUEST, ca);//5  CS101_COT_REQUEST
+    else if(cot==6)
+        encodeIdentificationField(self, frame, C_CS_NA_1, 1, CS101_COT_ACTIVATION, ca);//6  CS101_COT_ACTIVATION
+
 
     encodeIOA(self, frame, 0);
 
-    T104Frame_appendBytes(frame, CP56Time2a_getEncodedValue(time), 7);
+    T104Frame_appendBytes(frame, (uint8_t*)time, 7);
+    //T104Frame_setNextByte(time[0]);
 
     return sendASDUInternal(self, frame);
 }
