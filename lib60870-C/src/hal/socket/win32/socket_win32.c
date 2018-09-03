@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2016 MZ Automation GmbH
  *
  *  This file is part of lib60870-C
@@ -28,6 +28,8 @@
 #include "hal_socket.h"
 #include "lib_memory.h"
 #include "lib60870_config.h"
+#include "lib60870_internal.h"
+#include <qDebug>
 #include <stdio.h>
 
 #define DEBUG_SOCKET 0
@@ -413,13 +415,22 @@ Socket_read(Socket self, uint8_t* buf, int size)
     int bytes_read = recv(self->fd, (char*) buf, size, 0);
 
     if (bytes_read == 0) // peer has closed socket
+    {
+        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"recv(self->fd, (char*) buf, size, 0)==0,peer has closed socket";
         return -1;
+    }
 
     if (bytes_read == SOCKET_ERROR) {
         if (WSAGetLastError() == WSAEWOULDBLOCK)
+        {
+            qDebug()<<"DEBUG_LIB60870:(warnning)"<<"recv(self->fd, (char*) buf, size, 0)==SOCKET_ERROR,WSAGetLastError()==WSAEWOULDBLOCK";
             return 0;
+        }
         else
+        {
+            qDebug()<<"DEBUG_LIB60870:(warnning)"<<"recv(self->fd, (char*) buf, size, 0)==SOCKET_ERROR";
             return -1;
+        }
     }
 
 	return bytes_read;

@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <QDebug>
 
 #include "cs104_frame.h"
 #include "hal_thread.h"
@@ -43,8 +44,8 @@ struct sCS104_APCIParameters defaultAPCIParameters = {
 		/* .t0 = */ 10,
 		/* .t1 = */ 15,
 		/* .t2 = */ 10,
-		/* .t3 = */ 20
-};
+        /* .t3 = */ 10
+};//old default value: t3=20
 
 static struct sCS101_AppLayerParameters defaultAppLayerParameters = {
     /* .sizeOfTypeId =  */ 1,
@@ -119,7 +120,11 @@ struct sCS104_Connection {
 
     CS104_MSGSendHandler msgsendHandler;
     void* msgsendHandlerParameter;
-};
+
+    CS104_ImportantInfoHandler importantInfoHandler;
+    void* importantInfoHandlerParameter;
+
+}connectionHandler;
 
 
 static uint8_t STARTDT_ACT_MSG[] = { 0x68, 0x04, 0x07, 0x00, 0x00, 0x00 };
@@ -208,6 +213,8 @@ createConnection(const char* hostname, int tcpPort)
         self->msgreceivedHandlerParameter = NULL;
         self->msgsendHandler = NULL;
         self->msgsendHandlerParameter = NULL;
+        self->importantInfoHandler = NULL;
+        self->importantInfoHandlerParameter = NULL;
 #if (CONFIG_USE_THREADS == 1)
         self->sentASDUsLock = Semaphore_create(1);
         self->connectionHandlingThread = NULL;
@@ -466,19 +473,31 @@ receiveMessageSocket(Socket socket, uint8_t* buffer)
     int readFirst = Socket_read(socket, buffer, 1);
 
     if (readFirst < 1)
+    {
+        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"Socket_read(socket, buffer, 1) return value < 1,value is "<<readFirst;
         return readFirst;
+    }
 
     if (buffer[0] != 0x68)
+    {
+        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"message error,buffer[0] != 0x68,buffer[0] =="<<buffer[0];
         return -1; /* message error */
+    }
 
     if (Socket_read(socket, buffer + 1, 1) != 1)
+    {
+        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"Socket_read(socket, buffer + 1, 1) != 1";
         return -1;
+    }
 
     int length = buffer[1];
 
     /* read remaining frame */
     if (Socket_read(socket, buffer + 2, length) != length)
+    {
+        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"message error,Socket_read(socket, buffer + 2, length) != buffer[1]";
         return -1;
+    }
 
     return length + 2;
 }
@@ -523,23 +542,32 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
         }
 
         if (msgSize < 7) {
-            DEBUG_PRINT("I msg too small!\n");
+            DEBUG_PRINT("checkMessage return false,I msg too small!");//\n
+            if (self->importantInfoHandler != NULL)
+                self->importantInfoHandler(self->importantInfoHandlerParameter, "checkMessage return false,I msg too small!");
             return false;
         }
 
         int frameSendSequenceNumber = ((buffer [3] * 0x100) + (buffer [2] & 0xfe)) / 2;
         int frameRecvSequenceNumber = ((buffer [5] * 0x100) + (buffer [4] & 0xfe)) / 2;
 
-        DEBUG_PRINT("Received I frame: N(S) = %i N(R) = %i\n", frameSendSequenceNumber, frameRecvSequenceNumber);
-
+        //DEBUG_PRINT("Received I frame: N(S) = %i N(R) = %i\n", frameSendSequenceNumber, frameRecvSequenceNumber);
+        qDebug()<<"DEBUG_LIB60870: "<<"Received I frame: N(S) = "<<frameSendSequenceNumber<<" N(R) = "<<frameRecvSequenceNumber;
         /* check the receive sequence number N(R) - connection will be closed on an unexpected value */
         if (frameSendSequenceNumber != self->receiveCount) {
-            DEBUG_PRINT("Sequence error: Close connection!");
-            return false;
+            DEBUG_PRINT("checkMessage return false(I format frame),Sequence error: (Shoud) Close connection!");
+            if (self->importantInfoHandler != NULL)
+                self->importantInfoHandler(self->importantInfoHandlerParameter, "checkMessage return false(I format frame),Sequence error: (Shoud) Close Connection!");//
+            //return false;
         }
 
         if (checkSequenceNumber(self, frameRecvSequenceNumber) == false)
-            return false;
+        {
+            DEBUG_PRINT("checkSequenceNumber(self, frameRecvSequenceNumber) (Shoud) return false!");
+            if (self->importantInfoHandler != NULL)
+                self->importantInfoHandler(self->importantInfoHandlerParameter, "checkSequenceNumber(self, frameRecvSequenceNumber) (Shoud) return false!");
+            //return false;
+        }
 
         self->receiveCount = (self->receiveCount + 1) % 32768;
         self->unconfirmedReceivedIMessages++;
@@ -553,35 +581,52 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
             CS101_ASDU_destroy(asdu);
         }
         else
+        {
+            if (self->importantInfoHandler != NULL)
+                self->importantInfoHandler(self->importantInfoHandlerParameter, "CS101_ASDU == NULL,return false!");
             return false;
+        }
 
     }
     else if ((buffer[2] & 0x03) == 0x03) { /* U format frame */
 
-        DEBUG_PRINT("Received U frame\n");
+        DEBUG_PRINT("Received U frame");//\n
 
         self->uMessageTimeout = 0;
 
         if (buffer[2] == 0x43) { /* Check for TESTFR_ACT message */
-            DEBUG_PRINT("Send TESTFR_CON\n");
+            DEBUG_PRINT("Send TESTFR_CON");//\n
+            //qDebug()<<"DEBUG_LIB60870:"<<"(for printtest)Send TESTFR_CON\n";
+
+//            if (self->importantInfoHandler != NULL)
+//                self->importantInfoHandler(self->importantInfoHandlerParameter, "Send TESTFR_CON!");//
             writeToSocket(self, TESTFR_CON_MSG, TESTFR_CON_MSG_SIZE);
         }
         else if (buffer[2] == 0x83) { /* TESTFR_CON */
-            DEBUG_PRINT("Rcvd TESTFR_CON\n");
+            DEBUG_PRINT("Rcvd TESTFR_CON");//\n
+            //qDebug()<<"DEBUG_LIB60870:"<<"(for printtest)Rcvd TESTFR_CON\n";
+
             self->outstandingTestFCConMessages = 0;
         }
         else if (buffer[2] == 0x07) { /* STARTDT_ACT */
-            DEBUG_PRINT("Send STARTDT_CON\n");
+            DEBUG_PRINT("Send STARTDT_CON");//\n
+            self->receiveCount = 0;//clear seqnum
+            self->sendCount = 0;
+            self->unconfirmedReceivedIMessages = 0;
             writeToSocket(self, STARTDT_CON_MSG, STARTDT_CON_MSG_SIZE);
         }
         else if (buffer[2] == 0x0b) { /* STARTDT_CON */
-            DEBUG_PRINT("Received STARTDT_CON\n");
-
+            DEBUG_PRINT("Received STARTDT_CON");//\n
+            self->receiveCount = 0;//clear seqnum
+            self->sendCount = 0;
+            self->unconfirmedReceivedIMessages = 0;
+            if (self->importantInfoHandler != NULL)
+                self->importantInfoHandler(self->importantInfoHandlerParameter, "Received STARTDT_CON(68040b000000)!");//
             if (self->connectionHandler != NULL)
                 self->connectionHandler(self->connectionHandlerParameter, self, CS104_CONNECTION_STARTDT_CON_RECEIVED);
         }
         else if (buffer[2] == 0x23) { /* STOPDT_CON */
-            DEBUG_PRINT("Received STOPDT_CON\n");
+            DEBUG_PRINT("Received STOPDT_CON");//\n
 
             if (self->connectionHandler != NULL)
                 self->connectionHandler(self->connectionHandlerParameter, self, CS104_CONNECTION_STOPDT_CON_RECEIVED);
@@ -591,10 +636,16 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
     else if (buffer [2] == 0x01) { /* S-message */
         int seqNo = (buffer[4] + buffer[5] * 0x100) / 2;
 
-        DEBUG_PRINT("Rcvd S(%i) (own sendcounter = %i)\n", seqNo, self->sendCount);
+        //DEBUG_PRINT("Rcvd S(%i) (own sendcounter = %i)\n", seqNo, self->sendCount);
+        qDebug()<<"DEBUG_LIB60870: "<<"Rcvd S("<<seqNo<<") (own sendcounter = "<<self->sendCount<<")";
 
         if (checkSequenceNumber(self, seqNo) == false)
+        {
+            DEBUG_PRINT("checkMessage return false(S-message),Sequence error: Close connection!");
+            if (self->importantInfoHandler != NULL)
+                self->importantInfoHandler(self->importantInfoHandlerParameter, "checkMessage return false(S-message),Sequence error: Close connection!");
             return false;
+        }
     }
 
 
@@ -613,14 +664,16 @@ handleTimeouts(CS104_Connection self)
     if (currentTime > self->nextT3Timeout) {
 
         if (self->outstandingTestFCConMessages > 2) {
-            DEBUG_PRINT("Timeout for TESTFR_CON message\n");
+            DEBUG_PRINT("Timeout for TESTFR_CON message");//\n
 
             /* close connection */
             retVal = false;
+            if (self->importantInfoHandler != NULL)
+                self->importantInfoHandler(self->importantInfoHandlerParameter, "(handleTimeouts)Timeout for TESTFR_CON message: Close connection!");
             goto exit_function;
         }
         else {
-            DEBUG_PRINT("U message T3 timeout\n");
+            DEBUG_PRINT("U message T3 timeout");//\n
 
             writeToSocket(self, TESTFR_ACT_MSG, TESTFR_ACT_MSG_SIZE);
             self->uMessageTimeout = currentTime + (self->parameters.t1 * 1000);
@@ -645,9 +698,9 @@ handleTimeouts(CS104_Connection self)
 
     if (self->uMessageTimeout != 0) {
         if (currentTime > self->uMessageTimeout) {
-            DEBUG_PRINT("U message T1 timeout\n");
-            retVal = false;
-            goto exit_function;
+            DEBUG_PRINT("U message T1 timeout");//\n
+            //retVal = false;
+            //goto exit_function;
         }
     }
 
@@ -658,7 +711,7 @@ handleTimeouts(CS104_Connection self)
 #endif
     if (self->oldestSentASDU != -1) {
         if ((currentTime - self->sentASDUs[self->oldestSentASDU].sentTime) >= (uint64_t) (self->parameters.t1 * 1000)) {
-            DEBUG_PRINT("I message timeout\n");
+            DEBUG_PRINT("I message timeout");//\n
             //retVal = false;
         }
     }
@@ -722,7 +775,12 @@ handleConnection(void* parameter)
 
                     if (bytesRec == -1) {
                         loopRunning = false;
-                        self->failure = true;
+                        self->failure = true;//perror();strerror(errno);
+                        if (self->importantInfoHandler != NULL)
+                        {
+                            self->importantInfoHandler(self->importantInfoHandlerParameter, "loopRunning is set false,receiveMessage bytesRec == -1,strerror(errno):");
+                            self->importantInfoHandler(self->importantInfoHandlerParameter, strerror(errno));
+                        }
                     }
 
                     if (bytesRec > 0) {
@@ -730,6 +788,9 @@ handleConnection(void* parameter)
                         if (checkMessage(self, buffer, bytesRec) == false) {
                             /* close connection on error */
                             loopRunning= false;
+                            DEBUG_PRINT("loopRunning is set false,checkMessage(self, buffer, bytesRec) is false");//\n
+                            if (self->importantInfoHandler != NULL)
+                                self->importantInfoHandler(self->importantInfoHandlerParameter, "loopRunning is set false,checkMessage(self, buffer, bytesRec) return false!");
                             self->failure = true;
                         }
                     }
@@ -742,17 +803,29 @@ handleConnection(void* parameter)
                 }
 
                 if (handleTimeouts(self) == false)
+                {
                     loopRunning = false;
+                    DEBUG_PRINT("loopRunning is set false,handleTimeouts(self) is false");//\n
+                    if (self->importantInfoHandler != NULL)
+                        self->importantInfoHandler(self->importantInfoHandlerParameter, "loopRunning is set false,handleTimeouts(self) return false!");
+                }
 
                 if (self->close)
+                {
                     loopRunning = false;
+                    DEBUG_PRINT("loopRunning is set false,self->close is true");//\n
+                    if (self->importantInfoHandler != NULL)
+                        self->importantInfoHandler(self->importantInfoHandlerParameter, "loopRunning is set false,self->close is true!");
+                }
             }
 
             Handleset_destroy(handleSet);
 
             /* Call connection handler */
             if (self->connectionHandler != NULL)
+            {
                 self->connectionHandler(self->connectionHandlerParameter, self, CS104_CONNECTION_CLOSED);
+            }
 
         }
     }
@@ -767,7 +840,9 @@ handleConnection(void* parameter)
 
     Socket_destroy(self->socket);
 
-    DEBUG_PRINT("EXIT CONNECTION HANDLING THREAD\n");
+    DEBUG_PRINT("EXIT CONNECTION HANDLING THREAD!!!");//\n
+    if (self->importantInfoHandler != NULL)
+        self->importantInfoHandler(self->importantInfoHandlerParameter, "EXIT CONNECTION HANDLING THREAD!");
 
     self->running = false;
 
@@ -798,6 +873,12 @@ CS104_Connection_connect(CS104_Connection self)
     return self->running;
 }
 
+bool
+CS104_Connection_station(CS104_Connection self)
+{
+    return self->running;
+}
+
 void
 CS104_Connection_setASDUReceivedHandler(CS104_Connection self, CS101_ASDUReceivedHandler handler, void* parameter)
 {
@@ -817,6 +898,13 @@ CS104_Connection_setMSGSendHandler(CS104_Connection self, CS104_MSGSendHandler h
 {
     self->msgsendHandler = handler;
     self->msgsendHandlerParameter = parameter;
+}
+
+void
+CS104_Connection_setImportantInfoHandler(CS104_Connection self, CS104_ImportantInfoHandler handler, void* parameter)
+{
+    self->importantInfoHandler = handler;
+    self->importantInfoHandlerParameter = parameter;
 }
 
 void

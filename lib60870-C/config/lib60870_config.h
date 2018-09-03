@@ -6,8 +6,9 @@
 #define CONFIG_LIB60870_CONFIG_H_
 
 
-/* print debugging information with printf if set to 1 */
-#define CONFIG_DEBUG_OUTPUT 0
+/* print debugging information with printf if set to 1 ,else set to 0*/
+//#define CONFIG_DEBUG_OUTPUT 0
+#define CONFIG_DEBUG_OUTPUT 1
 
 
 

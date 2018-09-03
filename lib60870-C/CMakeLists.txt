@@ -1,5 +1,7 @@
-﻿cmake_minimum_required(VERSION 2.8)
+﻿#cmake verson，指定cmake版本
+cmake_minimum_required(VERSION 2.8)
 
+SET_PROPERTY(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS TRUE)
 # automagically detect if we should cross-compile
 if(DEFINED ENV{TOOLCHAIN})
 	set(CMAKE_C_COMPILER	$ENV{TOOLCHAIN}gcc)
@@ -7,8 +9,14 @@ if(DEFINED ENV{TOOLCHAIN})
 	set(CMAKE_AR	"$ENV{TOOLCHAIN}ar" CACHE FILEPATH "CW archiver" FORCE)
 endif()
 
-find_package(Qt5Core)
 
+#INCLUDE(${QT_USE_FILE})
+find_package(Qt5Core REQUIRED)
+MESSAGE( STATUS "QTDIR?:         " ${QT_USE_FILE} )
+
+
+
+#project name，指定项目的名称，一般和项目的文件夹名称对应
 project(lib60870-C)
 ENABLE_TESTING()
 
@@ -17,11 +25,15 @@ set(LIB_VERSION_MINOR "0")
 set(LIB_VERSION_PATCH "0")
 
 
+
 #set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/third_party/cmake/modules/")
 
 ## Appends the cmake/modules path to MAKE_MODULE_PATH variable.
 #${CMAKE_CURRENT_SOURCE_DIR} : CMakeLists.txt所在路径
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules ${CMAKE_MODULE_PATH})
+message(CMAKE_MODULE_PATH)
+
+#MESSAGE(${QTDIR})
 
 include(GetGitRevisionDescription)
 git_describe(VERSION --tags --dirty=-d)
@@ -34,7 +46,7 @@ git_describe(VERSION --tags --dirty=-d)
 STRING( REPLACE "-" "." VERSION ${VERSION})
 STRING( REPLACE "g" "" VERSION ${VERSION})
 #STRING( REPLACE "g" "" VERSION ${VERSION})
-MESSAGE(VERSION)
+MESSAGE( STATUS "VERSION:         " ${VERSION} )
 
 string(REGEX REPLACE "^v([a-f0-9]+)\\..*" "\\1" LIB_VERSION_MAJOR "${VERSION}")
 string(REGEX REPLACE "^v[a-f0-9]+\\.([a-f0-9]+).*" "\\1" LIB_VERSION_MINOR "${VERSION}")
@@ -43,7 +55,21 @@ string(REGEX REPLACE "^v[a-f0-9]+\\.[a-f0-9]+\\.[a-f0-9]+.([a-f0-9]+).*" "\\1" L
 #set(VERSION "${LIB_VERSION_MAJOR}.${LIB_VERSION_MINOR}.${LIB_VERSION_PATCH}.${LIB_VERSION_SHA1}")
 set(VERSION "${LIB_VERSION_MAJOR}.${LIB_VERSION_MINOR}.${LIB_VERSION_PATCH}.${LIB_VERSION_SHA1}")
 MESSAGE(VERSION)
+MESSAGE( STATUS "VERSION:[" ${VERSION} )
 
+set(LIB_VERSION_MAJOR "2")
+set(LIB_VERSION_MINOR "0")
+set(LIB_VERSION_PATCH "0")
+
+
+
+set (QTD "${QTDIR}")
+MESSAGE(QTD)
+MESSAGE(QTD)
+MESSAGE(QTD)
+set(QTD "$ENV{QTDIR}")
+MESSAGE(CMAKE_CURRENT_LIST_DIR)
+MESSAGE( STATUS "QTDIR:         " ${QTD} )
 
 macro(ADD_C_FLAGS flags)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${flags}")
@@ -68,7 +94,11 @@ include_directories(
     ${CMAKE_CURRENT_LIST_DIR}/config
     ${CMAKE_CURRENT_LIST_DIR}/src/inc/api
     ${CMAKE_CURRENT_LIST_DIR}/src/inc/internal
-    ${CMAKE_CURRENT_LIST_DIR}/src/inc/vs
+    ${CMAKE_CURRENT_LIST_DIR}/src/inc/vs  #stdbool.h
+    ${QTD}/include/QtCore
+    ${QTD}/include
+   # ${CMAKE_CURRENT_LIST_DIR}/../../../../Qt_vs/Qt5.2.1/5.2.1/msvc2010/include/QtCore
+   # ${CMAKE_CURRENT_LIST_DIR}/../../../../Qt_vs/Qt5.2.1/5.2.1/msvc2010/include/
     ${CMAKE_CURRENT_LIST_DIR}/src/common/inc
     ${CMAKE_CURRENT_LIST_DIR}/src/hal/inc
     ${CMAKE_CURRENT_LIST_DIR}/src/tls

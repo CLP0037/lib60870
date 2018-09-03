@@ -1,4 +1,4 @@
-﻿
+﻿set(QTD "$ENV{QTDIR}")
 set (lib_common_SRCS
 ./common/lib_memory.c
 ./common/linked_list.c
@@ -101,22 +101,27 @@ if ( WIN32 )
 endif( WIN32 )
 
 add_library (lib60870-shared SHARED ${library_SRCS} )
+LINK_DIRECTORIES(${QTD}/lib)
+#MESSAGE( STATUS "QTDIR4444:         " ${QTD} )
+
+TARGET_LINK_LIBRARIES(lib60870-shared Qt5::Core)
 
 set_target_properties(lib60870-shared PROPERTIES
            OUTPUT_NAME lib60870
            SOVERSION "${LIB_VERSION_MAJOR}.${LIB_VERSION_MINOR}.${LIB_VERSION_PATCH}.${LIB_VERSION_SHA1}"
-	   WINDOWS_EXPORT_ALL_SYMBOLS true
+           WINDOWS_EXPORT_ALL_SYMBOLS true
 )
 
 
 GENERATE_EXPORT_HEADER(lib60870-shared
-			BASE_NAME lib60870-shared
-			EXPORT_MACRO_NAME lib60870-shared_EXPORT
-			EXPORT_FILE_NAME lib60870-shared_export.h
-			STATIC_DEFINE lib60870-shared_BUILT_AS_STATIC
+                        BASE_NAME lib60870-shared
+                        EXPORT_MACRO_NAME lib60870-shared_EXPORT
+                        EXPORT_FILE_NAME lib60870-shared_export.h
+                        STATIC_DEFINE lib60870-shared_BUILT_AS_STATIC
 )
 
 add_library (lib60870 STATIC ${library_SRCS})
+TARGET_LINK_LIBRARIES(lib60870 Qt5::Core)
 
 IF(UNIX)
   IF (CONFIG_SYSTEM_HAS_CLOCK_GETTIME)
@@ -140,6 +145,7 @@ ENDIF(MINGW)
 
 
 install (TARGETS lib60870 lib60870-shared
+#install (TARGETS lib60870
 	RUNTIME DESTINATION bin COMPONENT Applications
 	ARCHIVE DESTINATION lib COMPONENT Libraries
     LIBRARY DESTINATION lib COMPONENT Libraries

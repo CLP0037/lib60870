@@ -54,4 +54,6 @@ typedef bool (*CS104_MSGReceivedHandler) (void* parameter, uint8_t* buffer, int 
 //CS104_MSGSendHandler
 typedef bool (*CS104_MSGSendHandler) (void* parameter, uint8_t* buffer, int msgSize);//, CS101_ASDU asdu
 
+typedef void (*CS104_ImportantInfoHandler)(void* parameter, char* msg);
+
 #endif /* SRC_IEC60870_MASTER_H_ */

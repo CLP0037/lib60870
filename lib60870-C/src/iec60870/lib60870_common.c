@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2016 MZ Automation GmbH
  *
  *  This file is part of lib60870-C
@@ -24,6 +24,8 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <QDebug>
+//#include "qdebug.h"
 
 #if (CONFIG_DEBUG_OUTPUT == 1)
 static bool debugOutputEnabled = 1;
@@ -34,11 +36,13 @@ lib60870_debug_print(const char *format, ...)
 {
 #if (CONFIG_DEBUG_OUTPUT == 1)
     if (debugOutputEnabled) {
+
         printf("DEBUG_LIB60870: ");
         va_list ap;
         va_start(ap, format);
         vprintf(format, ap);
         va_end(ap);
+        qDebug()<<"DEBUG_LIB60870:"<<format;//带格式的输出问题有待解决!!!
     }
 #endif
 }

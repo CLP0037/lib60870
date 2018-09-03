@@ -147,6 +147,9 @@ CS104_Connection_connectAsync(CS104_Connection self);
 bool
 CS104_Connection_connect(CS104_Connection self);
 
+bool
+CS104_Connection_station(CS104_Connection self);//获取当前连接状态
+
 /**
  * \brief start data transmission on this connection
  *
@@ -301,6 +304,8 @@ void
 CS104_Connection_setMSGReceivedHandler(CS104_Connection self, CS104_MSGReceivedHandler handler, void* parameter);
 void
 CS104_Connection_setMSGSendHandler(CS104_Connection self, CS104_MSGSendHandler handler, void* parameter);
+void
+CS104_Connection_setImportantInfoHandler(CS104_Connection self, CS104_ImportantInfoHandler handler, void* parameter);
 
 typedef enum {
     CS104_CONNECTION_OPENED = 0,
