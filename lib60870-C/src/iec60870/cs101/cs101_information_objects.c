@@ -7663,10 +7663,15 @@ ParamValue_Read_getFromBuffer(ParamValue_Read self, CS101_AppLayerParameters par
             for(int k=0;k<self->__sParamRead.structParamRead[i].datalen;k++)
             {
                 self->__sParamRead.structParamRead[i].datavalue[k] = msg[startIndex++];
-                if(self->__sParamRead.structParamRead[i].datavalue[k] >=128)//若
-                {
-                    self->__sParamRead.structParamRead[i].datavalue[k]=0;
-                }
+
+//                if(self->__sParamRead.structParamRead[i].tagType == 4)//针对字符串类型    String  4  可变
+//                {
+//                    if(self->__sParamRead.structParamRead[i].datavalue[k] >=128)//若
+//                    {
+//                        self->__sParamRead.structParamRead[i].datavalue[k]=0;
+//                    }
+//                }
+
             }
 
 

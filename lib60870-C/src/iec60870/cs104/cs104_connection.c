@@ -40,12 +40,12 @@
 
 struct sCS104_APCIParameters defaultAPCIParameters = {
 		/* .k = */ 12,
-		/* .w = */ 8,
+        /* .w = */ 1,
 		/* .t0 = */ 10,
 		/* .t1 = */ 15,
 		/* .t2 = */ 10,
         /* .t3 = */ 10
-};//old default value: t3=20
+};//old default value: w=8; t3=20
 
 static struct sCS101_AppLayerParameters defaultAppLayerParameters = {
     /* .sizeOfTypeId =  */ 1,
