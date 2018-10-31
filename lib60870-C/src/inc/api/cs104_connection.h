@@ -307,6 +307,11 @@ CS104_Connection_setMSGSendHandler(CS104_Connection self, CS104_MSGSendHandler h
 void
 CS104_Connection_setImportantInfoHandler(CS104_Connection self, CS104_ImportantInfoHandler handler, void* parameter);
 
+void
+CS104_Connection_setMSGReceivedHandler_withExplain(CS104_Connection self, CS104_MSGReceivedHandler_withExplain handler, void* parameter);
+void
+CS104_Connection_setMSGSendHandler_withExplain(CS104_Connection self, CS104_MSGSendHandler_withExplain handler, void* parameter);
+
 typedef enum {
     CS104_CONNECTION_OPENED = 0,
     CS104_CONNECTION_CLOSED = 1,

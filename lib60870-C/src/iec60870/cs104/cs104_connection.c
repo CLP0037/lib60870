@@ -65,7 +65,6 @@ typedef struct {
     int seqNo;
 } SentASDU;
 
-
 struct sCS104_Connection {
     char hostname[HOST_NAME_MAX + 1];
     int tcpPort;
@@ -114,12 +113,21 @@ struct sCS104_Connection {
     CS104_ConnectionHandler connectionHandler;
     void* connectionHandlerParameter;
 
-
+    //报文收发
     CS104_MSGReceivedHandler msgreceivedHandler;
     void* msgreceivedHandlerParameter;
 
     CS104_MSGSendHandler msgsendHandler;
     void* msgsendHandlerParameter;
+
+    //报文收发（带解析版本）
+    CS104_MSGReceivedHandler_withExplain msgreceivedHandler_withExplain;
+    void* msgreceivedHandlerParameter_withExplain;
+
+    CS104_MSGSendHandler_withExplain msgsendHandler_withExplain;
+    void* msgsendHandlerParameter_withExplain;
+
+    _FRAMESTRUCT104 cs104_frame;//104帧结构
 
     CS104_ImportantInfoHandler importantInfoHandler;
     void* importantInfoHandlerParameter;
@@ -147,7 +155,7 @@ writeToSocket(CS104_Connection self, uint8_t* buf, int size)
 {
     if (size > 0) {
         if (self->msgsendHandler != NULL)
-            self->msgsendHandler(self->msgreceivedHandlerParameter, buf, size);
+            self->msgsendHandler(self->msgsendHandlerParameter, buf, size);
 
     }
 #if (CONFIG_CS104_SUPPORT_TLS == 1)
@@ -178,6 +186,19 @@ sendSMessage(CS104_Connection self)
     msg [5] = (uint8_t) (self->receiveCount / 128);
 
     writeToSocket(self, msg, 6);
+
+    if(self->msgsendHandler_withExplain != NULL)
+    {
+        //按规约类型分别赋值解析描述
+        self->cs104_frame.TI = 0;
+        self->cs104_frame.COT = 0;
+        self->cs104_frame.EC = 0;
+        self->cs104_frame.NR = self->receiveCount;
+        self->cs104_frame.NS = self->sendCount;
+        self->cs104_frame.FT = 3;//frame type帧类型：1-I帧 2-U帧 3-S帧
+
+        self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, msg, 6,"S_frame_explain",self->cs104_frame,NULL);//
+    }
 }
 
 static int
@@ -186,6 +207,26 @@ sendIMessage(CS104_Connection self, Frame frame)
     T104Frame_prepareToSend((T104Frame) frame, self->sendCount, self->receiveCount);
 
     writeToSocket(self, T104Frame_getBuffer(frame), T104Frame_getMsgSize(frame));
+
+    if(self->msgsendHandler_withExplain != NULL)
+    {
+        CS101_ASDU asdu = CS101_ASDU_createFromBuffer((CS101_AppLayerParameters)&(self->alParameters), T104Frame_getBuffer(frame) + 6, T104Frame_getMsgSize(frame) - 6);
+        //按规约类型分别赋值解析描述
+        if (asdu != NULL)
+        {
+            self->cs104_frame.TI = CS101_ASDU_getTypeID(asdu);
+            self->cs104_frame.COT = CS101_ASDU_getCOT(asdu);
+            self->cs104_frame.EC = CS101_ASDU_getNumberOfElements(asdu);
+            self->cs104_frame.NR = self->receiveCount;
+            self->cs104_frame.NS = self->sendCount;
+            self->cs104_frame.FT = 1;//frame type帧类型：1-I帧 2-U帧 3-S帧
+
+            self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, T104Frame_getBuffer(frame), T104Frame_getMsgSize(frame),"S_frame_explain",self->cs104_frame,asdu);//
+            CS101_ASDU_destroy(asdu);
+        }
+
+    }
+
 
     self->sendCount = (self->sendCount + 1) % 32768;
 
@@ -213,6 +254,20 @@ createConnection(const char* hostname, int tcpPort)
         self->msgreceivedHandlerParameter = NULL;
         self->msgsendHandler = NULL;
         self->msgsendHandlerParameter = NULL;
+
+        //_withExplain
+        self->msgreceivedHandler_withExplain = NULL;
+        self->msgreceivedHandlerParameter_withExplain = NULL;
+        self->msgsendHandler_withExplain = NULL;
+        self->msgsendHandlerParameter_withExplain = NULL;
+        self->cs104_frame.TI = 0;
+        self->cs104_frame.COT = 0;
+        self->cs104_frame.VSQ = 0;
+        self->cs104_frame.NS = 0;
+        self->cs104_frame.NR = 0;
+        self->cs104_frame.EC = 0;
+        self->cs104_frame.FT = 0;
+
         self->importantInfoHandler = NULL;
         self->importantInfoHandlerParameter = NULL;
 #if (CONFIG_USE_THREADS == 1)
@@ -528,6 +583,7 @@ checkConfirmTimeout(CS104_Connection self, uint64_t currentTime)//long
 static bool
 checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
 {
+
     if (msgSize > 0) {
         if (self->msgreceivedHandler != NULL)
             self->msgreceivedHandler(self->msgreceivedHandlerParameter, buffer, msgSize);
@@ -578,6 +634,16 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
             if (self->receivedHandler != NULL)
                 self->receivedHandler(self->receivedHandlerParameter, -1, asdu);
 
+
+            self->cs104_frame.TI = CS101_ASDU_getTypeID(asdu);
+            self->cs104_frame.COT = CS101_ASDU_getCOT(asdu);
+            self->cs104_frame.EC = CS101_ASDU_getNumberOfElements(asdu);
+            self->cs104_frame.NR = frameRecvSequenceNumber;
+            self->cs104_frame.NS = frameSendSequenceNumber;
+            self->cs104_frame.FT = 1;//frame type帧类型：1-I帧 2-U帧 3-S帧
+            if (self->msgreceivedHandler_withExplain != NULL)
+                self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"I_frame_explain",self->cs104_frame,asdu);
+
             CS101_ASDU_destroy(asdu);
         }
         else
@@ -590,43 +656,69 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
     }
     else if ((buffer[2] & 0x03) == 0x03) { /* U format frame */
 
-        DEBUG_PRINT("Received U frame");//\n
+        //DEBUG_PRINT("Received U frame");//\n
+        self->cs104_frame.TI = 0;
+        self->cs104_frame.COT = 0;
+        self->cs104_frame.EC = 0;
+        self->cs104_frame.NR = 0;
+        self->cs104_frame.NS = 0;
+        self->cs104_frame.FT = 2;//frame type帧类型：1-I帧 2-U帧 3-S帧
+
 
         self->uMessageTimeout = 0;
 
         if (buffer[2] == 0x43) { /* Check for TESTFR_ACT message */
-            DEBUG_PRINT("Send TESTFR_CON");//\n
-            //qDebug()<<"DEBUG_LIB60870:"<<"(for printtest)Send TESTFR_CON\n";
-
+//            DEBUG_PRINT("Send TESTFR_CON");//\n
+            if (self->msgreceivedHandler_withExplain != NULL)
+                self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Send TESTFR_CON",self->cs104_frame,NULL);
+//            //qDebug()<<"DEBUG_LIB60870:"<<"(for printtest)Send TESTFR_CON\n";
 //            if (self->importantInfoHandler != NULL)
 //                self->importantInfoHandler(self->importantInfoHandlerParameter, "Send TESTFR_CON!");//
             writeToSocket(self, TESTFR_CON_MSG, TESTFR_CON_MSG_SIZE);
+
+            if(self->msgsendHandler_withExplain != NULL)
+            {
+                self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, buffer, 6,"Send TESTFR_CON",self->cs104_frame,NULL);//
+            }
         }
         else if (buffer[2] == 0x83) { /* TESTFR_CON */
-            DEBUG_PRINT("Rcvd TESTFR_CON");//\n
+//            DEBUG_PRINT("Rcvd TESTFR_CON");//\n
+            if (self->msgreceivedHandler_withExplain != NULL)
+                self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Rcvd TESTFR_CON",self->cs104_frame,NULL);
             //qDebug()<<"DEBUG_LIB60870:"<<"(for printtest)Rcvd TESTFR_CON\n";
 
             self->outstandingTestFCConMessages = 0;
         }
         else if (buffer[2] == 0x07) { /* STARTDT_ACT */
-            DEBUG_PRINT("Send STARTDT_CON");//\n
+            //DEBUG_PRINT("Send STARTDT_CON");//\n
+            if (self->msgreceivedHandler_withExplain != NULL)
+                self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Send STARTDT_CON",self->cs104_frame,NULL);
             self->receiveCount = 0;//clear seqnum
             self->sendCount = 0;
             self->unconfirmedReceivedIMessages = 0;
             writeToSocket(self, STARTDT_CON_MSG, STARTDT_CON_MSG_SIZE);
+
+            if(self->msgsendHandler_withExplain != NULL)
+            {
+                self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, buffer, 6,"Send STARTDT_CON",self->cs104_frame,NULL);//
+            }
         }
         else if (buffer[2] == 0x0b) { /* STARTDT_CON */
-            DEBUG_PRINT("Received STARTDT_CON");//\n
+            //DEBUG_PRINT("Received STARTDT_CON");//\n
+            if (self->msgreceivedHandler_withExplain != NULL)
+                self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Rcvd STARTDT_CON",self->cs104_frame,NULL);
             self->receiveCount = 0;//clear seqnum
             self->sendCount = 0;
             self->unconfirmedReceivedIMessages = 0;
-            if (self->importantInfoHandler != NULL)
-                self->importantInfoHandler(self->importantInfoHandlerParameter, "Received STARTDT_CON(68040b000000)!");//
+//            if (self->importantInfoHandler != NULL)
+//                self->importantInfoHandler(self->importantInfoHandlerParameter, "Received STARTDT_CON(68040b000000)!");//
             if (self->connectionHandler != NULL)
                 self->connectionHandler(self->connectionHandlerParameter, self, CS104_CONNECTION_STARTDT_CON_RECEIVED);
         }
         else if (buffer[2] == 0x23) { /* STOPDT_CON */
-            DEBUG_PRINT("Received STOPDT_CON");//\n
+            //DEBUG_PRINT("Received STOPDT_CON");//\n
+            if (self->msgreceivedHandler_withExplain != NULL)
+                self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Rcvd STOPDT_CON",self->cs104_frame,NULL);
 
             if (self->connectionHandler != NULL)
                 self->connectionHandler(self->connectionHandlerParameter, self, CS104_CONNECTION_STOPDT_CON_RECEIVED);
@@ -635,13 +727,21 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
     }
     else if (buffer [2] == 0x01) { /* S-message */
         int seqNo = (buffer[4] + buffer[5] * 0x100) / 2;
+        self->cs104_frame.TI = 0;
+        self->cs104_frame.COT = 0;
+        self->cs104_frame.EC = 0;
+        self->cs104_frame.NR = seqNo;
+        self->cs104_frame.NS = self->sendCount;
+        self->cs104_frame.FT = 3;//frame type帧类型：1-I帧 2-U帧 3-S帧
+        if (self->msgreceivedHandler_withExplain != NULL)
+            self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"S_frame_explain",self->cs104_frame,NULL);
 
         //DEBUG_PRINT("Rcvd S(%i) (own sendcounter = %i)\n", seqNo, self->sendCount);
-        qDebug()<<"DEBUG_LIB60870: "<<"Rcvd S("<<seqNo<<") (own sendcounter = "<<self->sendCount<<")";
+        //qDebug()<<"DEBUG_LIB60870: "<<"Rcvd S("<<seqNo<<") (own sendcounter = "<<self->sendCount<<")";
 
         if (checkSequenceNumber(self, seqNo) == false)
         {
-            DEBUG_PRINT("checkMessage return false(S-message),Sequence error: Close connection!");
+            //DEBUG_PRINT("checkMessage return false(S-message),Sequence error: Close connection!");
             if (self->importantInfoHandler != NULL)
                 self->importantInfoHandler(self->importantInfoHandlerParameter, "checkMessage return false(S-message),Sequence error: Close connection!");
             return false;
@@ -676,6 +776,16 @@ handleTimeouts(CS104_Connection self)
             DEBUG_PRINT("U message T3 timeout");//\n
 
             writeToSocket(self, TESTFR_ACT_MSG, TESTFR_ACT_MSG_SIZE);
+            if(self->msgsendHandler_withExplain != NULL)
+            {
+                self->cs104_frame.TI = 0;
+                self->cs104_frame.COT = 0;
+                self->cs104_frame.EC = 0;
+                self->cs104_frame.NR = 0;
+                self->cs104_frame.NS = 0;
+                self->cs104_frame.FT = 2;//frame type帧类型：1-I帧 2-U帧 3-S帧
+                self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, TESTFR_ACT_MSG, 6,"Send TESTFR_ASK",self->cs104_frame,NULL);//
+            }
             self->uMessageTimeout = currentTime + (self->parameters.t1 * 1000);
             self->outstandingTestFCConMessages++;
 
@@ -901,6 +1011,20 @@ CS104_Connection_setMSGSendHandler(CS104_Connection self, CS104_MSGSendHandler h
 }
 
 void
+CS104_Connection_setMSGReceivedHandler_withExplain(CS104_Connection self, CS104_MSGReceivedHandler_withExplain handler, void* parameter)
+{
+    self->msgreceivedHandler_withExplain = handler;
+    self->msgreceivedHandlerParameter_withExplain = parameter;
+}
+
+void
+CS104_Connection_setMSGSendHandler_withExplain(CS104_Connection self, CS104_MSGSendHandler_withExplain handler, void* parameter)
+{
+    self->msgsendHandler_withExplain = handler;
+    self->msgsendHandlerParameter_withExplain = parameter;
+}
+
+void
 CS104_Connection_setImportantInfoHandler(CS104_Connection self, CS104_ImportantInfoHandler handler, void* parameter)
 {
     self->importantInfoHandler = handler;
@@ -948,12 +1072,32 @@ void
 CS104_Connection_sendStartDT(CS104_Connection self)
 {
     writeToSocket(self, STARTDT_ACT_MSG, STARTDT_ACT_MSG_SIZE);
+    if(self->msgsendHandler_withExplain != NULL)
+    {
+        self->cs104_frame.TI = 0;
+        self->cs104_frame.COT = 0;
+        self->cs104_frame.EC = 0;
+        self->cs104_frame.NR = 0;
+        self->cs104_frame.NS = 0;
+        self->cs104_frame.FT = 2;//frame type帧类型：1-I帧 2-U帧 3-S帧
+        self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, STARTDT_ACT_MSG, 6,"Send STARTDT_ACT",self->cs104_frame,NULL);//
+    }
 }
 
 void
 CS104_Connection_sendStopDT(CS104_Connection self)
 {
     writeToSocket(self, STOPDT_ACT_MSG, STOPDT_ACT_MSG_SIZE);
+    if(self->msgsendHandler_withExplain != NULL)
+    {
+        self->cs104_frame.TI = 0;
+        self->cs104_frame.COT = 0;
+        self->cs104_frame.EC = 0;
+        self->cs104_frame.NR = 0;
+        self->cs104_frame.NS = 0;
+        self->cs104_frame.FT = 2;//frame type帧类型：1-I帧 2-U帧 3-S帧
+        self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, STOPDT_ACT_MSG, 6,"Send STOPDT_ACT",self->cs104_frame,NULL);//
+    }
 }
 
 static void

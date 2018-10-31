@@ -54,6 +54,25 @@ typedef bool (*CS104_MSGReceivedHandler) (void* parameter, uint8_t* buffer, int 
 //CS104_MSGSendHandler
 typedef bool (*CS104_MSGSendHandler) (void* parameter, uint8_t* buffer, int msgSize);//, CS101_ASDU asdu
 
+//_withExplain
+typedef struct
+{
+    unsigned char 		TI;   //类型标识
+    unsigned char 		COT;  //传送原因
+    unsigned char 		VSQ;
+    unsigned int 		NS;   //发送序号
+    unsigned int 		NR;   //接收序号
+    unsigned char 		EC;   //element count
+    unsigned char 		FT;   //frame type帧类型：1-I帧 2-U帧 3-S帧
+}_FRAMESTRUCT104;//规约结构
+//CS104_MSGReceivedHandler
+typedef bool (*CS104_MSGReceivedHandler_withExplain) (void* parameter, uint8_t* buffer, int msgSize,char* msg_explain,_FRAMESTRUCT104 sframe, CS101_ASDU asdu);
+
+//CS104_MSGSendHandler
+typedef bool (*CS104_MSGSendHandler_withExplain) (void* parameter, uint8_t* buffer, int msgSize,char* msg_explain,_FRAMESTRUCT104 sframe, CS101_ASDU asdu);//,_FRAMESTRUCT104 sframe
+
+
+
 typedef void (*CS104_ImportantInfoHandler)(void* parameter, char* msg);
 
 #endif /* SRC_IEC60870_MASTER_H_ */
