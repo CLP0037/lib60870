@@ -216,6 +216,8 @@ sendIMessage(CS104_Connection self, Frame frame)
         {
             self->cs104_frame.TI = CS101_ASDU_getTypeID(asdu);
             self->cs104_frame.COT = CS101_ASDU_getCOT(asdu);
+            self->cs104_frame.COT += (CS101_ASDU_isTest(asdu)==true)?0x80:0x00;
+            self->cs104_frame.COT += (CS101_ASDU_isNegative(asdu)==true)?0x40:0x00;
             self->cs104_frame.EC = CS101_ASDU_getNumberOfElements(asdu);
             self->cs104_frame.NR = self->receiveCount;
             self->cs104_frame.NS = self->sendCount;
@@ -637,6 +639,8 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
 
             self->cs104_frame.TI = CS101_ASDU_getTypeID(asdu);
             self->cs104_frame.COT = CS101_ASDU_getCOT(asdu);
+            self->cs104_frame.COT += (CS101_ASDU_isTest(asdu)==true)?0x80:0x00;
+            self->cs104_frame.COT += (CS101_ASDU_isNegative(asdu)==true)?0x40:0x00;
             self->cs104_frame.EC = CS101_ASDU_getNumberOfElements(asdu);
             self->cs104_frame.NR = frameRecvSequenceNumber;
             self->cs104_frame.NS = frameSendSequenceNumber;
