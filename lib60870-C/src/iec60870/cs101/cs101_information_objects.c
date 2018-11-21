@@ -1365,9 +1365,11 @@ FaultEventWithCP56Time2a_getFromBuffer(FaultEventWithCP56Time2a self, CS101_AppL
         int i=0;
         for(i=0;i<self->num_YX;i++)
         {
-            //故障遥信点号  2 字节
+            //故障遥信点号  2 字节(change to 3 bytes for YX_infomation_addr)
             self->structFaultEven_YX[i].addr = msg [startIndex++];
             self->structFaultEven_YX[i].addr += (msg [startIndex++] * 0x100);
+            self->structFaultEven_YX[i].addr += (msg [startIndex++] * 0x10000);
+
             //遥信值  1 字节
             self->structFaultEven_YX[i].State = msg [startIndex++];
             //故障时刻时标 CP56Time2a  7 字节
