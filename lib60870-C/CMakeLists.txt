@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 
 SET_PROPERTY(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS TRUE)
 # automagically detect if we should cross-compile
+
 if(DEFINED ENV{TOOLCHAIN})
 	set(CMAKE_C_COMPILER	$ENV{TOOLCHAIN}gcc)
 	set(CMAKE_CXX_COMPILER	$ENV{TOOLCHAIN}g++)
@@ -11,8 +12,12 @@ endif()
 
 
 #INCLUDE(${QT_USE_FILE})
-find_package(Qt5Core REQUIRED)
-MESSAGE( STATUS "QTDIR?:         " ${QT_USE_FILE} )
+#set(ENV{Qt5Core_DIR} "/usr/lib/arm-linux-gnueabihf/cmake/Qt5Core")
+#MESSAGE( STATUS $ENV{Qt5Core_DIR} )
+
+
+
+#MESSAGE( STATUS "QTDIR?:         " ${QT_USE_FILE} )
 
 
 
@@ -63,13 +68,6 @@ set(LIB_VERSION_PATCH "0")
 
 
 
-set (QTD "${QTDIR}")
-MESSAGE(QTD)
-MESSAGE(QTD)
-MESSAGE(QTD)
-set(QTD "$ENV{QTDIR}")
-MESSAGE(CMAKE_CURRENT_LIST_DIR)
-MESSAGE( STATUS "QTDIR:         " ${QTD} )
 
 macro(ADD_C_FLAGS flags)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${flags}")
@@ -90,13 +88,29 @@ endif(EXISTS ${CMAKE_CURRENT_LIST_DIR}/dependencies/mbedtls-2.6.0)
 option(BUILD_EXAMPLES "Build the examples" ON)
 option(BUILD_TESTS "Build the tests" ON)
 
+
+
+set (QTD "${QTDIR}")
+set(QTD "$ENV{QTDIR}")
+MESSAGE( STATUS "QTDIR:         " ${QTD} )
+
+
+IF (WIN32)      #qDebug in windows, not in Linux as gcc does not work with C including c++ header
+include_directories(
+    ${CMAKE_CURRENT_LIST_DIR}/src/inc/vs  #stdbool.h
+    ${QTD}/include/QtCore
+    ${QTD}/include
+)
+find_package(Qt5Core REQUIRED)
+ENDIF (WIN32)
+
+
+
 include_directories(
     ${CMAKE_CURRENT_LIST_DIR}/config
     ${CMAKE_CURRENT_LIST_DIR}/src/inc/api
     ${CMAKE_CURRENT_LIST_DIR}/src/inc/internal
-    ${CMAKE_CURRENT_LIST_DIR}/src/inc/vs  #stdbool.h
-    ${QTD}/include/QtCore
-    ${QTD}/include
+
    # ${CMAKE_CURRENT_LIST_DIR}/../../../../Qt_vs/Qt5.2.1/5.2.1/msvc2010/include/QtCore
    # ${CMAKE_CURRENT_LIST_DIR}/../../../../Qt_vs/Qt5.2.1/5.2.1/msvc2010/include/
     ${CMAKE_CURRENT_LIST_DIR}/src/common/inc

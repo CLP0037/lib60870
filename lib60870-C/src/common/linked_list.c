@@ -21,6 +21,11 @@
 
 #include "linked_list.h"
 #include "lib_memory.h"
+#ifdef WIN32
+#include <vs/stdbool.h>
+#else
+#include <stdbool.h>
+#endif
 
 LinkedList
 LinkedList_getLastElement(LinkedList list)

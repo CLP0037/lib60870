@@ -1253,7 +1253,7 @@ struct sParamValue_Read{//202==读参数和定值
 
     uint8_t paramTI;//参数特征标识
     uint16_t SN;//定值区号 SN
-    sParamRead __sParamRead;//sParamRead *ParamRead;
+    struct sParamRead __sParamRead;//sParamRead *ParamRead;
 };
 
 struct sParamWrite{

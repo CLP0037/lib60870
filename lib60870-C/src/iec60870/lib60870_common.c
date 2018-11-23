@@ -24,7 +24,9 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#ifdef WIN32
 #include <QDebug>
+#endif
 //#include "qdebug.h"
 
 #if (CONFIG_DEBUG_OUTPUT == 1)
@@ -42,7 +44,9 @@ lib60870_debug_print(const char *format, ...)
         va_start(ap, format);
         vprintf(format, ap);
         va_end(ap);
+#ifdef WIN32
         qDebug()<<"DEBUG_LIB60870:"<<format;//带格式的输出问题有待解决!!!
+#endif
     }
 #endif
 }

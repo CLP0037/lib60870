@@ -101,10 +101,12 @@ if ( WIN32 )
 endif( WIN32 )
 
 add_library (lib60870-shared SHARED ${library_SRCS} )
+
+IF (WIN32)
 LINK_DIRECTORIES(${QTD}/lib)
 #MESSAGE( STATUS "QTDIR4444:         " ${QTD} )
-
 TARGET_LINK_LIBRARIES(lib60870-shared Qt5::Core)
+ENDIF (WIN32)
 
 set_target_properties(lib60870-shared PROPERTIES
            OUTPUT_NAME lib60870
@@ -121,7 +123,10 @@ GENERATE_EXPORT_HEADER(lib60870-shared
 )
 
 add_library (lib60870 STATIC ${library_SRCS})
+
+IF (WIN32)
 TARGET_LINK_LIBRARIES(lib60870 Qt5::Core)
+ENDIF (WIN32)
 
 IF(UNIX)
   IF (CONFIG_SYSTEM_HAS_CLOCK_GETTIME)

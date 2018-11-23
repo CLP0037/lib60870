@@ -25,7 +25,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#ifdef WIN32
 #include <QDebug>
+#else
+#include <syslog.h>
+#endif
+#include <errno.h>
 
 #include "cs104_frame.h"
 #include "hal_thread.h"
@@ -531,19 +536,28 @@ receiveMessageSocket(Socket socket, uint8_t* buffer)
 
     if (readFirst < 1)
     {
+#ifdef WIN32
         qDebug()<<"DEBUG_LIB60870:(warnning)"<<"Socket_read(socket, buffer, 1) return value < 1,value is "<<readFirst;
+#else
+        syslog(LOG_WARNING,"LIB60870:Socket_read(socket, buffer, 1) return value < 1,value is %d",readFirst);
+#endif
         return readFirst;
     }
 
     if (buffer[0] != 0x68)
     {
+#ifdef WIN32
         qDebug()<<"DEBUG_LIB60870:(warnning)"<<"message error,buffer[0] != 0x68,buffer[0] =="<<buffer[0];
+#endif
+
         return -1; /* message error */
     }
 
     if (Socket_read(socket, buffer + 1, 1) != 1)
     {
+#ifdef WIN32
         qDebug()<<"DEBUG_LIB60870:(warnning)"<<"Socket_read(socket, buffer + 1, 1) != 1";
+#endif
         return -1;
     }
 
@@ -552,7 +566,9 @@ receiveMessageSocket(Socket socket, uint8_t* buffer)
     /* read remaining frame */
     if (Socket_read(socket, buffer + 2, length) != length)
     {
+#ifdef WIN32
         qDebug()<<"DEBUG_LIB60870:(warnning)"<<"message error,Socket_read(socket, buffer + 2, length) != buffer[1]";
+#endif
         return -1;
     }
 
@@ -610,7 +626,9 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
         int frameRecvSequenceNumber = ((buffer [5] * 0x100) + (buffer [4] & 0xfe)) / 2;
 
         //DEBUG_PRINT("Received I frame: N(S) = %i N(R) = %i\n", frameSendSequenceNumber, frameRecvSequenceNumber);
+#ifdef WIN32
         qDebug()<<"DEBUG_LIB60870: "<<"Received I frame: N(S) = "<<frameSendSequenceNumber<<" N(R) = "<<frameRecvSequenceNumber;
+#endif
         /* check the receive sequence number N(R) - connection will be closed on an unexpected value */
         if (frameSendSequenceNumber != self->receiveCount) {
             DEBUG_PRINT("checkMessage return false(I format frame),Sequence error: (Shoud) Close connection!");

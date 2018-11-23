@@ -404,7 +404,7 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
     InformationObject retVal = NULL;
 
     int elementSize;
-
+    int operateType;
     switch (CS101_ASDU_getTypeID(self)) {
 
     case M_SP_NA_1: /* 1 */
@@ -1259,7 +1259,7 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
         //5-读文件数据响应=======提取文件
 
 
-        int operateType = CS101_ASDU_getFileOperateType(self);//self->asdu[9];
+        operateType = CS101_ASDU_getFileOperateType(self);//self->asdu[9];
 
         switch(operateType)
         {
