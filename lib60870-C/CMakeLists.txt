@@ -1,5 +1,6 @@
 ﻿#cmake verson，指定cmake版本
-cmake_minimum_required(VERSION 2.8)
+#cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.13)
 
 SET_PROPERTY(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS TRUE)
 # automagically detect if we should cross-compile
@@ -14,31 +15,41 @@ endif()
 #INCLUDE(${QT_USE_FILE})
 #set(ENV{Qt5Core_DIR} "/usr/lib/arm-linux-gnueabihf/cmake/Qt5Core")
 #MESSAGE( STATUS $ENV{Qt5Core_DIR} )
-
-
-
 #MESSAGE( STATUS "QTDIR?:         " ${QT_USE_FILE} )
-
-
 
 #project name，指定项目的名称，一般和项目的文件夹名称对应
 project(lib60870-C)
 ENABLE_TESTING()
-
+#设置基本tag（版本信息）：2.0.0
 set(LIB_VERSION_MAJOR "2")
 set(LIB_VERSION_MINOR "0")
 set(LIB_VERSION_PATCH "0")
 
+#In order for find_package to be successful, Qt 5 must be found below the CMAKE_PREFIX_PATH,
+#or the Qt5<Module>_DIR must be set in the CMake cache to the location of the Qt5WidgetsConfig.cmake file.
+#The easiest way to use CMake is to set the CMAKE_PREFIX_PATH environment variable to the install prefix of Qt 5.
 
+#set (QTD "${QTDIR}")
+set(QTD "$ENV{QTDIR}")
+MESSAGE( STATUS "QTDIR:         " ${QTD} )
 
-#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/third_party/cmake/modules/")
+IF (WIN32)      #qDebug in windows, not in Linux as gcc does not work with C including c++ header
+set(CMAKE_PREFIX_PATH $ENV{QTDIR}/5.2.1/msvc2010/lib/cmake/Qt5Core)
+include_directories(
+    ${CMAKE_CURRENT_LIST_DIR}/src/inc/vs  #stdbool.h
+    ${QTD}/include/QtCore
+    ${QTD}/include
+)
+find_package(Qt5Core REQUIRED)
+ENDIF (WIN32)
+MESSAGE( STATUS "CMAKE_CURRENT_LIST_DIR:         " ${CMAKE_CURRENT_LIST_DIR} )
+
 
 ## Appends the cmake/modules path to MAKE_MODULE_PATH variable.
 #${CMAKE_CURRENT_SOURCE_DIR} : CMakeLists.txt所在路径
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules ${CMAKE_MODULE_PATH})
-message(CMAKE_MODULE_PATH)
-
-#MESSAGE(${QTDIR})
+#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/third_party/cmake/modules/")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"  ${CMAKE_MODULE_PATH})
+message(STATUS "CMAKE_MODULE_PATH : " ${CMAKE_MODULE_PATH})
 
 include(GetGitRevisionDescription)
 git_describe(VERSION --tags --dirty=-d)
@@ -59,12 +70,12 @@ string(REGEX REPLACE "^v[a-f0-9]+\\.[a-f0-9]+\\.([a-f0-9]+).*" "\\1" LIB_VERSION
 string(REGEX REPLACE "^v[a-f0-9]+\\.[a-f0-9]+\\.[a-f0-9]+.([a-f0-9]+).*" "\\1" LIB_VERSION_SHA1 "${VERSION}")
 #set(VERSION "${LIB_VERSION_MAJOR}.${LIB_VERSION_MINOR}.${LIB_VERSION_PATCH}.${LIB_VERSION_SHA1}")
 set(VERSION "${LIB_VERSION_MAJOR}.${LIB_VERSION_MINOR}.${LIB_VERSION_PATCH}.${LIB_VERSION_SHA1}")
-MESSAGE(VERSION)
-MESSAGE( STATUS "VERSION:[" ${VERSION} )
+#MESSAGE(VERSION)
+MESSAGE( STATUS "VERSION:[" ${VERSION} "]" )
 
-set(LIB_VERSION_MAJOR "2")
-set(LIB_VERSION_MINOR "0")
-set(LIB_VERSION_PATCH "0")
+#set(LIB_VERSION_MAJOR "2")
+#set(LIB_VERSION_MINOR "0")
+#set(LIB_VERSION_PATCH "0")
 
 
 
@@ -87,23 +98,6 @@ endif(EXISTS ${CMAKE_CURRENT_LIST_DIR}/dependencies/mbedtls-2.6.0)
 
 option(BUILD_EXAMPLES "Build the examples" ON)
 option(BUILD_TESTS "Build the tests" ON)
-
-
-
-set (QTD "${QTDIR}")
-set(QTD "$ENV{QTDIR}")
-MESSAGE( STATUS "QTDIR:         " ${QTD} )
-
-
-IF (WIN32)      #qDebug in windows, not in Linux as gcc does not work with C including c++ header
-include_directories(
-    ${CMAKE_CURRENT_LIST_DIR}/src/inc/vs  #stdbool.h
-    ${QTD}/include/QtCore
-    ${QTD}/include
-)
-find_package(Qt5Core REQUIRED)
-ENDIF (WIN32)
-
 
 
 include_directories(
