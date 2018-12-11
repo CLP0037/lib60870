@@ -279,7 +279,8 @@ CS104_Connection_sendParamValueWrite(CS104_Connection self, CS101_CauseOfTransmi
 bool
 CS104_Connection_sendFileservingCommand(CS104_Connection self, CS101_CauseOfTransmission cot, int ca, InformationObject sc);
 
-
+//自定义报文组包====
+bool CS104_Connection_sendSelfdefinedFrame(CS104_Connection self,unsigned char* buf,int len);
 
 /**
  * \brief Send a user specified ASDU

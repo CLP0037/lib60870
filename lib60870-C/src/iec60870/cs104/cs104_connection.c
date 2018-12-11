@@ -1393,6 +1393,26 @@ CS104_Connection_sendFileservingCommand(CS104_Connection self, CS101_CauseOfTran
 }
 //========== <210>	：文件服务 ==========//
 
+//========== 自定义报文组包 ==========//
+bool CS104_Connection_sendSelfdefinedFrame(CS104_Connection self,unsigned char* buf,int len)
+{
+    if(len <= 0)
+    {
+        return false;
+    }
+
+    //writeToSocket(CS104_Connection self, uint8_t* buf, int size)
+    int rtn = writeToSocket(self, (uint8_t*)buf, len);
+
+    if(rtn < len)
+    {
+        return false;
+    }
+
+    return true;
+}
+//========== 自定义报文组包 ==========//
+
 bool
 CS104_Connection_sendASDU(CS104_Connection self, CS101_ASDU asdu)
 {
