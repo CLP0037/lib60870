@@ -173,6 +173,11 @@ DoubleCommand
 DoubleCommand_getFromBuffer(DoubleCommand self, CS101_AppLayerParameters parameters,
         uint8_t* msg, int msgSize, int startIndex);
 
+//遥控开关参数设置（私有）
+CommandParamSet
+CommandParamSet_getFromBuffer(CommandParamSet self, CS101_AppLayerParameters parameters,
+        uint8_t* msg, int msgSize, int startIndex);
+
 StepCommand
 StepCommand_getFromBuffer(StepCommand self, CS101_AppLayerParameters parameters,
         uint8_t* msg, int msgSize, int startIndex);
@@ -849,6 +854,19 @@ struct sDoubleCommand {
     InformationObjectVFT virtualFunctionTable;
 
     uint8_t dcq;
+};
+
+struct sCommandParamSet {
+
+    int objectAddress;
+
+    TypeID type;
+
+    InformationObjectVFT virtualFunctionTable;
+
+    int param1;
+    int param2;
+    int param3;
 };
 
 struct sDoubleCommandWithCP56Time2a {

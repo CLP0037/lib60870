@@ -351,6 +351,22 @@ CS101_ASDU_getTypeID(CS101_ASDU self)
     return (TypeID) (self->asdu[0]);
 }
 
+int
+CS101_ASDU_getIOA_add(CS101_ASDU self)
+{
+    int startIndex = self->asduHeaderLength;
+
+    int ioa = self->asdu[startIndex];
+
+    if (self->parameters->sizeOfIOA > 1)
+        ioa += (self->asdu [startIndex + 1] * 0x100);
+
+    if (self->parameters->sizeOfIOA > 2)
+        ioa += (self->asdu [startIndex + 2] * 0x10000);
+
+    return ioa;
+}
+
 bool
 CS101_ASDU_isSequence(CS101_ASDU self)
 {
@@ -960,7 +976,10 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
 
         elementSize = self->parameters->sizeOfIOA + 1;
 
-        retVal = (InformationObject) SingleCommand_getFromBuffer(NULL, self->parameters, self->payload, self->payloadSize,  index * elementSize);
+        if(getFirstIOA(self)>=(0x6001+50))//CommandParamSet_getFromBuffer   信息体地址>=0x6001+50
+            retVal = (InformationObject) CommandParamSet_getFromBuffer(NULL, self->parameters, self->payload, self->payloadSize,  index * elementSize);//
+        else
+            retVal = (InformationObject) SingleCommand_getFromBuffer(NULL, self->parameters, self->payload, self->payloadSize,  index * elementSize);
 
         break;
 
@@ -969,7 +988,10 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
 
         elementSize = self->parameters->sizeOfIOA + 1;
 
-        retVal = (InformationObject) DoubleCommand_getFromBuffer(NULL, self->parameters, self->payload, self->payloadSize,  index * elementSize);
+        if(getFirstIOA(self)>=(0x6001+50))//CommandParamSet_getFromBuffer   信息体地址>=0x6001+50
+            retVal = (InformationObject) CommandParamSet_getFromBuffer(NULL, self->parameters, self->payload, self->payloadSize,  index * elementSize);//
+        else
+            retVal = (InformationObject) DoubleCommand_getFromBuffer(NULL, self->parameters, self->payload, self->payloadSize,  index * elementSize);
 
         break;
 

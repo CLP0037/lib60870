@@ -4486,6 +4486,125 @@ DoubleCommand_getFromBuffer(DoubleCommand self, CS101_AppLayerParameters paramet
     return self;
 }
 
+//CommandParamSet  开关参数设置（遥控扩展）
+/*******************************************
+ * CommandParamSet : InformationObject
+ *******************************************/
+//void
+//CommandParamSet_destroy(CommandParamSet self);
+//DoubleCommand
+//CommandParamSet_create(CommandParamSet self, int ioa, int param1, int param2, int param3);
+//int
+//CommandParamSet_getParam1(CommandParamSet self);
+//int
+//CommandParamSet_getParam2(CommandParamSet self);
+//int
+//CommandParamSet_getParam3(CommandParamSet self);
+
+static bool
+CommandParamSet_encode(CommandParamSet self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    int size = isSequence ? 1 : (parameters->sizeOfIOA + 1);
+
+    if (Frame_getSpaceLeft(frame) < size)
+        return false;
+
+    InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+
+    Frame_setNextByte(frame, (self->param1)&0xff);
+    Frame_setNextByte(frame, 0x00);
+    Frame_setNextByte(frame, (self->param2)&0xff);
+    Frame_setNextByte(frame, (self->param3)&0xff);
+    Frame_setNextByte(frame, ((self->param3)&0xff00)>>8);
+
+    return true;
+}
+
+struct sInformationObjectVFT commandParamSetVFT = {
+        (EncodeFunction) CommandParamSet_encode,
+        (DestroyFunction) CommandParamSet_destroy
+};
+
+static void
+CommandParamSet_initialize(CommandParamSet self)
+{
+    self->virtualFunctionTable = &(commandParamSetVFT);
+    self->type = C_SC_NA_1;//默认单点  45
+}
+
+void
+CommandParamSet_destroy(CommandParamSet self)
+{
+    GLOBAL_FREEMEM(self);
+}
+
+CommandParamSet
+CommandParamSet_create(CommandParamSet self, int ioa, int param1, int param2, int param3)
+{
+    if (self == NULL)
+        self = (CommandParamSet) GLOBAL_MALLOC(sizeof(struct sCommandParamSet));
+
+    if (self) {
+        CommandParamSet_initialize(self);
+
+        self->objectAddress = ioa;
+
+        self->param1 = param1;
+        self->param2 = param2;
+        self->param3 = param3;
+    }
+
+    return self;
+}
+
+int
+CommandParamSet_getParam1(CommandParamSet self)
+{
+    return self->param1;
+}
+
+int
+CommandParamSet_getParam2(CommandParamSet self)
+{
+   return self->param2;
+}
+
+int
+CommandParamSet_getParam3(CommandParamSet self)
+{
+    return self->param3;
+}
+
+CommandParamSet
+CommandParamSet_getFromBuffer(CommandParamSet self, CS101_AppLayerParameters parameters,
+        uint8_t* msg, int msgSize, int startIndex)
+{
+    if ((msgSize - startIndex) < (parameters->sizeOfIOA + 1))
+        return NULL;
+
+    if (self == NULL)
+        self = (CommandParamSet) GLOBAL_MALLOC(sizeof(struct sCommandParamSet));
+
+    if (self != NULL) {
+        CommandParamSet_initialize(self);
+
+        InformationObject_getFromBuffer((InformationObject) self, parameters, msg, startIndex);
+
+        startIndex += parameters->sizeOfIOA; /* skip IOA */
+
+        /* param */
+        self->param1 = msg[startIndex];
+        startIndex++;
+        self->param2 = msg[startIndex];
+        startIndex++;
+        self->param3 = msg[startIndex];
+        startIndex++;
+        self->param3 += msg[startIndex]*256;
+    }
+
+    return self;
+}
+
 /**********************************************
  * DoubleCommandWithCP56Time2a : DoubleCommand  C_DC_TA_1=59  带时标CP56Time2a的双命令
  **********************************************/

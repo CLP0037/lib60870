@@ -375,6 +375,9 @@ CS101_ASDU_setCA(CS101_ASDU self, int ca);
 IEC60870_5_TypeID
 CS101_ASDU_getTypeID(CS101_ASDU self);
 
+int
+CS101_ASDU_getIOA_add(CS101_ASDU self);
+
 /**
  * \brief Check if the ASDU contains a sequence of consecutive information objects
  *

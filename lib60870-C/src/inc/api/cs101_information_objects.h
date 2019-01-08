@@ -998,6 +998,27 @@ DoubleCommand_getState(DoubleCommand self);
 bool
 DoubleCommand_isSelect(DoubleCommand self);
 
+//CommandParamSet  开关参数设置（遥控扩展）
+/*******************************************
+ * CommandParamSet : InformationObject
+ *******************************************/
+typedef struct sCommandParamSet* CommandParamSet;
+
+void
+CommandParamSet_destroy(CommandParamSet self);
+
+CommandParamSet
+CommandParamSet_create(CommandParamSet self, int ioa, int param1, int param2, int param3);
+
+int
+CommandParamSet_getParam1(CommandParamSet self);
+
+int
+CommandParamSet_getParam2(CommandParamSet self);
+
+int
+CommandParamSet_getParam3(CommandParamSet self);
+
 /*******************************************
  * StepCommand : InformationObject
  *******************************************/
