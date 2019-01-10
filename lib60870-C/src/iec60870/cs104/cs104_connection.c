@@ -843,7 +843,7 @@ handleTimeouts(CS104_Connection self)
 #endif
     if (self->oldestSentASDU != -1) {
         if ((currentTime - self->sentASDUs[self->oldestSentASDU].sentTime) >= (uint64_t) (self->parameters.t1 * 1000)) {
-            DEBUG_PRINT("I message timeout");//\n
+            DEBUG_PRINT("I message timeout,self->parameters.t1 = %d (currentTime - self->sentASDUs[self->oldestSentASDU].sentTime = %d)\n",self->parameters.t1,(currentTime - self->sentASDUs[self->oldestSentASDU].sentTime));//\n
             //retVal = false;
         }
     }
