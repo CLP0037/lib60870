@@ -51,10 +51,13 @@ LIB_API_HEADER_FILES = src/hal/inc/hal_time.h
 LIB_API_HEADER_FILES += src/hal/inc/hal_thread.h
 LIB_API_HEADER_FILES += src/hal/inc/hal_filesystem.h 
 LIB_API_HEADER_FILES += src/inc/api/iec60870_master.h
-LIB_API_HEADER_FILES += src/inc/api/iec60870_server.h
+# LIB_API_HEADER_FILES += src/inc/api/iec60870_server.h
+LIB_API_HEADER_FILES += src/inc/api/iec60870_slave.h
 LIB_API_HEADER_FILES += src/inc/api/iec60870_common.h
-LIB_API_HEADER_FILES += src/inc/api/information_objects.h
-LIB_API_HEADER_FILES += src/inc/api/t104_connection.h
+# LIB_API_HEADER_FILES += src/inc/api/information_objects.h
+LIB_API_HEADER_FILES += src/inc/api/cs101_information_objects.h
+# LIB_API_HEADER_FILES += src/inc/api/t104_connection.h
+LIB_API_HEADER_FILES += src/inc/api/cs104_connection.h
 LIB_API_HEADER_FILES += src/tls/tls_api.h
 
 LIB_TEST_SOURCES = tests/all_tests.c
