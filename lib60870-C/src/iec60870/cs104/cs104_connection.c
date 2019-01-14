@@ -631,7 +631,7 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
 #endif
         /* check the receive sequence number N(R) - connection will be closed on an unexpected value */
         if (frameSendSequenceNumber != self->receiveCount) {
-            DEBUG_PRINT("checkMessage return false(I format frame),Sequence error: (Shoud) Close connection!");
+            DEBUG_PRINT("checkMessage return false(I format frame),frameSendSequenceNumber error: (Shoud) Close connection!");
             if (self->importantInfoHandler != NULL)
                 self->importantInfoHandler(self->importantInfoHandlerParameter, "checkMessage return false(I format frame),Sequence error: (Shoud) Close Connection!");//
             //return false;
@@ -785,8 +785,8 @@ handleTimeouts(CS104_Connection self)
 
     if (currentTime > self->nextT3Timeout) {
 
-        if (self->outstandingTestFCConMessages > 2) {
-            DEBUG_PRINT("Timeout for TESTFR_CON message");//\n
+        if (self->outstandingTestFCConMessages > 2) {//测试帧重发两次未回复，断开链路
+            //DEBUG_PRINT("Timeout for TESTFR_CON message");//\n
 
             /* close connection */
             retVal = false;
@@ -795,7 +795,7 @@ handleTimeouts(CS104_Connection self)
             goto exit_function;
         }
         else {
-            DEBUG_PRINT("U message T3 timeout");//\n
+            //DEBUG_PRINT("U message T3 timeout");//\n 长期空闲状态下发送测试帧的超时
 
             writeToSocket(self, TESTFR_ACT_MSG, TESTFR_ACT_MSG_SIZE);
             if(self->msgsendHandler_withExplain != NULL)
@@ -806,7 +806,7 @@ handleTimeouts(CS104_Connection self)
                 self->cs104_frame.NR = 0;
                 self->cs104_frame.NS = 0;
                 self->cs104_frame.FT = 2;//frame type帧类型：1-I帧 2-U帧 3-S帧
-                self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, TESTFR_ACT_MSG, 6,"Send TESTFR_ASK",self->cs104_frame,NULL);//
+                self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, TESTFR_ACT_MSG, 6,"Send TESTFR_ASK(U message T3 timeout)",self->cs104_frame,NULL);//
             }
             self->uMessageTimeout = currentTime + (self->parameters.t1 * 1000);
             self->outstandingTestFCConMessages++;
@@ -843,7 +843,7 @@ handleTimeouts(CS104_Connection self)
 #endif
     if (self->oldestSentASDU != -1) {
         if ((currentTime - self->sentASDUs[self->oldestSentASDU].sentTime) >= (uint64_t) (self->parameters.t1 * 1000)) {
-            DEBUG_PRINT("I message timeout,self->parameters.t1 = %d (currentTime - self->sentASDUs[self->oldestSentASDU].sentTime = %d)\n",self->parameters.t1,(currentTime - self->sentASDUs[self->oldestSentASDU].sentTime));//\n
+            //DEBUG_PRINT("I message timeout,self->parameters.t1 = %d (currentTime - self->sentASDUs[%d].sentTime = %d)\n",self->parameters.t1,self->oldestSentASDU,(currentTime - self->sentASDUs[self->oldestSentASDU].sentTime));//\n
             //retVal = false;
         }
     }
