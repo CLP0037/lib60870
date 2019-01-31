@@ -50,6 +50,18 @@ extern "C" {
 
 typedef struct sCS104_Connection* CS104_Connection;
 
+typedef struct sCS104_Connection_mStation* CS104_Connection_mStation;
+
+/**
+ * \brief Connection request handler is called when a client tries to connect to the server.
+ *
+ * \param parameter user provided parameter
+ * \param ipAddress string containing IP address and TCP port number (e.g. "192.168.1.1:34521")
+ *
+ * \return true to accept the connection request, false to deny
+ */
+typedef bool (*CS104_ConnectionRequestHandler_mStation) (void* parameter, const char* ipAddress, int port);
+
 /**
  * \brief Create a new connection object
  *
@@ -60,6 +72,9 @@ typedef struct sCS104_Connection* CS104_Connection;
  */
 CS104_Connection
 CS104_Connection_create(const char* hostname, int tcpPort);
+
+CS104_Connection
+CS104_Connection_create_mStation(CS104_Connection slave, Socket socket);
 
 /**
  * \brief Create a new secure connection object (uses TLS)
@@ -146,6 +161,9 @@ CS104_Connection_connectAsync(CS104_Connection self);
  */
 bool
 CS104_Connection_connect(CS104_Connection self);
+
+bool
+CS104_Connection_connect_mStation(CS104_Connection self);
 
 bool
 CS104_Connection_station(CS104_Connection self);//获取当前连接状态
@@ -343,6 +361,67 @@ CS104_Connection_close(CS104_Connection self);
  */
 void
 CS104_Connection_destroy(CS104_Connection self);
+
+
+
+//===============  104 connection : as server and as master station ==============//
+
+CS104_Connection_mStation
+sCS104_Connection_mStation_create(int maxLowPrioQueueSize, int maxHighPrioQueueSize);
+
+/**
+ * \brief Set the local IP address to bind the server
+ * use "0.0.0.0" to bind to all interfaces
+ *
+ * \param self the slave instance
+ * \param ipAddress the IP address string or hostname
+ */
+void
+CS104_Connection_setLocalAddress(CS104_Connection_mStation self, const char* ipAddress);
+
+/**
+ * \brief Set the local TCP port to bind the server
+ *
+ * \param self the slave instance
+ * \param tcpPort the TCP port to use (default is 2404)
+ */
+void
+CS104_Connection_setLocalPort(CS104_Connection_mStation self, int tcpPort);
+
+int
+CS104_Connection_getOpenConnections(CS104_Connection_mStation self);
+
+void
+CS104_Connection_setConnectionRequestHandler(CS104_Connection_mStation self, CS104_ConnectionRequestHandler_mStation handler, void* parameter);
+
+/**
+ * \brief State the CS 104 slave. The slave (server) will listen on the configured TCP/IP port
+ *
+ * \param self CS104_Slave instance
+ */
+void
+CS104_Connection_start_mStation(CS104_Connection_mStation self);
+
+bool
+CS104_Connection_isRunning_mStation(CS104_Connection_mStation self);
+
+void
+CS104_Connection_stop_mStation(CS104_Connection_mStation self);
+
+void
+CS104_Connection_destroy_mStation(CS104_Connection_mStation self);
+
+void
+CS104_Connection_deactivate(CS104_Connection self);
+
+
+
+
+
+
+//===============  104 connection : as server and as master station ==============//
+
+
 
 /*! @} */
 

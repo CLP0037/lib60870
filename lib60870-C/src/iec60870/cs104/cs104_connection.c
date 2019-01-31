@@ -43,6 +43,10 @@
 #include "lib60870_internal.h"
 #include "cs101_asdu_internal.h"
 
+#include "linked_list.h"
+
+#define CS104_DEFAULT_PORT 2404
+
 struct sCS104_APCIParameters defaultAPCIParameters = {
 		/* .k = */ 12,
         /* .w = */ 1,
@@ -137,8 +141,66 @@ struct sCS104_Connection {
     CS104_ImportantInfoHandler importantInfoHandler;
     void* importantInfoHandlerParameter;
 
+    CS104_Connection_mStation server_mStation;
+    bool isActive;
+
 }connectionHandler;
 
+//===============  104 connection : as server and as master station ==============//
+typedef enum {
+    CS104_MODE_SINGLE_REDUNDANCY_GROUP,
+    CS104_MODE_CONNECTION_IS_REDUNDANCY_GROUP
+} CS104_Connection_ServerMode;
+
+struct sCS104_Connection_mStation {
+
+    CS104_ConnectionRequestHandler_mStation connectionRequestHandler_mStation;
+    void* connectionRequestHandlerParameter_mStation;
+
+#if (CONFIG_CS104_SUPPORT_TLS == 1)
+    TLSConfiguration tlsConfig;
+#endif
+
+//#if (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP)
+//    MessageQueue asduQueue; /**< low priority ASDU queue and buffer */
+//    HighPriorityASDUQueue connectionAsduQueue; /**< high priority ASDU queue */
+//#endif
+
+#if (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP)
+    int maxLowPrioQueueSize;
+    int maxHighPrioQueueSize;
+#endif
+
+    int openConnections; /**< number of connected clients */   //客户端连接数
+    //LinkedList masterConnections; /**< references to all MasterConnection objects */
+    LinkedList masterConnections_mStation;
+#if (CONFIG_USE_THREADS == 1)
+    Semaphore openConnectionsLock;
+#endif
+
+    int maxOpenConnections; /**< maximum accepted open client connections */   //最大客户端连接数
+
+    CS104_Connection_ServerMode serverMode;
+
+    bool isStarting;
+    bool isRunning;
+    bool stopRunning;
+
+    int tcpPort;
+
+//    CS104_ServerMode serverMode;
+
+    char* localAddress;
+    Thread listeningThread;
+
+    CS104_Connection connections_mStation[1024];
+
+
+};
+
+
+
+//===============  104 connection : as server and as master station ==============//
 
 static uint8_t STARTDT_ACT_MSG[] = { 0x68, 0x04, 0x07, 0x00, 0x00, 0x00 };
 #define STARTDT_ACT_MSG_SIZE 6
@@ -302,6 +364,62 @@ CS104_Connection_create(const char* hostname, int tcpPort)
         tcpPort = IEC_60870_5_104_DEFAULT_PORT;
 
     return createConnection(hostname, tcpPort);
+}
+
+CS104_Connection
+CS104_Connection_create_mStation(CS104_Connection_mStation slave, Socket socket)
+{
+    CS104_Connection self = (CS104_Connection) GLOBAL_MALLOC(sizeof(struct sCS104_Connection));
+
+    if (self != NULL) {
+        self->server_mStation = slave;
+        self->socket = socket;
+
+        //strncpy(self->hostname, "127.0.0.1", HOST_NAME_MAX);//hostname
+        //self->tcpPort = 123456;//tcpPort
+
+        self->parameters = defaultAPCIParameters;
+        self->alParameters = defaultAppLayerParameters;
+
+        self->receivedHandler = NULL;
+        self->receivedHandlerParameter = NULL;
+
+        self->connectionHandler = NULL;
+        self->connectionHandlerParameter = NULL;
+
+        self->msgreceivedHandler = NULL;
+        self->msgreceivedHandlerParameter = NULL;
+        self->msgsendHandler = NULL;
+        self->msgsendHandlerParameter = NULL;
+
+        //_withExplain
+        self->msgreceivedHandler_withExplain = NULL;
+        self->msgreceivedHandlerParameter_withExplain = NULL;
+        self->msgsendHandler_withExplain = NULL;
+        self->msgsendHandlerParameter_withExplain = NULL;
+        self->cs104_frame.TI = 0;
+        self->cs104_frame.COT = 0;
+        self->cs104_frame.VSQ = 0;
+        self->cs104_frame.NS = 0;
+        self->cs104_frame.NR = 0;
+        self->cs104_frame.EC = 0;
+        self->cs104_frame.FT = 0;
+
+        self->importantInfoHandler = NULL;
+        self->importantInfoHandlerParameter = NULL;
+#if (CONFIG_USE_THREADS == 1)
+        self->sentASDUsLock = Semaphore_create(1);
+        self->connectionHandlingThread = NULL;
+#endif
+
+#if (CONFIG_CS104_SUPPORT_TLS == 1)
+        self->tlsConfig = NULL;
+        self->tlsSocket = NULL;
+#endif
+
+        self->sentASDUs = NULL;
+    }
+    return self;
 }
 
 #if (CONFIG_CS104_SUPPORT_TLS == 1)
@@ -830,7 +948,7 @@ handleTimeouts(CS104_Connection self)
 
     if (self->uMessageTimeout != 0) {
         if (currentTime > self->uMessageTimeout) {
-            DEBUG_PRINT("U message T1 timeout");//\n
+            DEBUG_PRINT("U message T1 timeout\n");//
             //retVal = false;
             //goto exit_function;
         }
@@ -972,7 +1090,126 @@ handleConnection(void* parameter)
 
     Socket_destroy(self->socket);
 
-    DEBUG_PRINT("EXIT CONNECTION HANDLING THREAD!!!");//\n
+    DEBUG_PRINT("EXIT CONNECTION HANDLING THREAD!!!\n");//
+    if (self->importantInfoHandler != NULL)
+        self->importantInfoHandler(self->importantInfoHandlerParameter, "EXIT CONNECTION HANDLING THREAD!");
+
+    self->running = false;
+
+    return NULL;
+}
+
+//handleConnection_mStation
+static void*
+handleConnection_mStation(void* parameter)
+{
+    CS104_Connection self = (CS104_Connection) parameter;
+    resetConnection(self);
+    resetT3Timeout(self);
+    //DEBUG_PRINT("handleConnection_mStation,after resetConnection(self) and resetT3Timeout(self)\n");//for debug
+    uint8_t buffer[260];
+
+    self->running = true;//self->isRunning = true;
+
+    HandleSet handleSet = Handleset_new();
+
+    bool isAsduWaiting = false;
+    bool loopRunning = true;
+
+    while (loopRunning) {//self->isRunning
+        //DEBUG_PRINT("in  while (loopRunning)\n");//for debug
+        Handleset_reset(handleSet);//DEBUG_PRINT("after Handleset_reset\n");//for debug
+        Handleset_addSocket(handleSet, self->socket);//DEBUG_PRINT("after Handleset_addSocket\n");//for debug
+
+        int socketTimeout;
+
+        /*
+         * When an ASDU is waiting only have a short look to see if a client request
+         * was received. Otherwise wait to save CPU time.
+         */
+        if (isAsduWaiting)
+            socketTimeout = 1;
+        else
+            socketTimeout = 100; /* TODO replace by configurable parameter */
+
+        //DEBUG_PRINT("before Handleset_waitReady\n");//for debug
+        if (Handleset_waitReady(handleSet, socketTimeout)) {
+            //DEBUG_PRINT("Handleset_waitReady(handleSet, socketTimeout)");//for debug
+            int bytesRec = receiveMessage(self, buffer);
+
+            if (bytesRec == -1) {
+                DEBUG_PRINT("Error reading from socket, strerror(errno) is %s\n", strerror(errno));
+                loopRunning = false;
+                self->failure = true;
+                break;
+            }
+
+            if (bytesRec > 0) {
+                DEBUG_PRINT("Connection: rcvd msg(%i bytes)\n", bytesRec);
+
+                if (checkMessage(self, buffer, bytesRec) == false) {
+                    /* close connection on error */
+                    loopRunning= false;
+                    DEBUG_PRINT("loopRunning is set false,checkMessage(self, buffer, bytesRec) is false");//\n
+                    self->failure = true;
+                }
+
+//                if (handleMessage(self, buffer, bytesRec) == false)
+//                    self->isRunning = false;
+
+//                if (self->unconfirmedReceivedIMessages >= self->slave->conParameters.w) {
+
+//                    self->lastConfirmationTime = Hal_getTimeInMs();
+
+//                    self->unconfirmedReceivedIMessages = 0;
+
+//                    sendSMessage(self);
+//                }
+            }
+        }//DEBUG_PRINT("after Handleset_waitReady\n");//for debug
+
+        if (handleTimeouts(self) == false)
+        {
+            loopRunning = false;
+            DEBUG_PRINT("loopRunning is set false,handleTimeouts(self) is false\n");//
+        }
+
+        if (self->close)
+        {
+            loopRunning = false;
+            DEBUG_PRINT("loopRunning is set false,self->close is true\n");//
+        }
+
+//        if (self->running)//self->isRunning
+//            if (self->isActive)
+//                isAsduWaiting = sendWaitingASDUs(self);
+    }
+
+    DEBUG_PRINT("Connection closed\n");
+
+    Handleset_destroy(handleSet);
+
+//    self->isRunning = false;
+
+//#if (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1)
+//    if (self->slave->serverMode == CS104_MODE_CONNECTION_IS_REDUNDANCY_GROUP) {
+//        MessageQueue_destroy(self->lowPrioQueue);
+//        HighPriorityASDUQueue_destroy(self->highPrioQueue);
+//    }
+//#endif
+
+//    CS104_Slave_removeConnection(self->slave, self);
+
+//    return NULL;
+
+#if (CONFIG_CS104_SUPPORT_TLS == 1)
+    if (self->tlsSocket)
+        TLSSocket_close(self->tlsSocket);
+#endif
+
+    Socket_destroy(self->socket);
+
+    DEBUG_PRINT("EXIT CONNECTION HANDLING THREAD!!!\n");//
     if (self->importantInfoHandler != NULL)
         self->importantInfoHandler(self->importantInfoHandlerParameter, "EXIT CONNECTION HANDLING THREAD!");
 
@@ -998,6 +1235,23 @@ bool
 CS104_Connection_connect(CS104_Connection self)
 {
     CS104_Connection_connectAsync(self);
+
+    while ((self->running == false) && (self->failure == false))
+        Thread_sleep(1);
+
+    return self->running;
+}
+
+bool
+CS104_Connection_connect_mStation(CS104_Connection self)
+{
+    //resetConnection(self);
+    //resetT3Timeout(self);
+    //DEBUG_PRINT("CS104_Connection_connect_mStation\n");//for debug
+    self->connectionHandlingThread = Thread_create(handleConnection_mStation, (void*) self, false);
+
+    if (self->connectionHandlingThread)
+        Thread_start(self->connectionHandlingThread);
 
     while ((self->running == false) && (self->failure == false))
         Thread_sleep(1);
@@ -1429,4 +1683,479 @@ CS104_Connection_isTransmitBufferFull(CS104_Connection self)
     return isSentBufferFull(self);
 }
 
+//===============  104 connection : as server and as master station ==============//
 
+CS104_Connection_mStation
+sCS104_Connection_mStation_create(int maxLowPrioQueueSize, int maxHighPrioQueueSize)
+{
+    printf("sCS104_Connection_mStation_create!\n");
+    CS104_Connection_mStation self = (CS104_Connection_mStation) GLOBAL_MALLOC(sizeof(struct sCS104_Connection_mStation));
+
+    if(self != NULL)
+    {
+        self->connectionRequestHandler_mStation = NULL;
+
+#if (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1)
+        self->maxLowPrioQueueSize = maxLowPrioQueueSize;
+        self->maxHighPrioQueueSize = maxHighPrioQueueSize;
+#endif
+
+        self->isRunning = false;
+        self->stopRunning = false;
+
+        self->localAddress = NULL;
+        self->tcpPort = CS104_DEFAULT_PORT;
+        self->openConnections = 0;  //初始化，当前连接数=0
+        self->listeningThread = NULL;
+
+
+         self->masterConnections_mStation = LinkedList_create();
+
+#if (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1)
+        self->serverMode = CS104_MODE_SINGLE_REDUNDANCY_GROUP;
+#else
+#if (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1)
+        self->serverMode = CS104_MODE_CONNECTION_IS_REDUNDANCY_GROUP;
+#endif
+#endif
+
+    }
+
+    return self;
+}
+
+void
+CS104_Connection_setLocalAddress(CS104_Connection_mStation self, const char* ipAddress)
+{
+    printf("CS104_Connection_setLocalAddress 127.0.0.1\n");
+    if (self->localAddress)
+        GLOBAL_FREEMEM(self->localAddress);
+
+    self->localAddress = (char*) GLOBAL_MALLOC(strlen(ipAddress) + 1);
+
+    if (self->localAddress)
+        strcpy(self->localAddress, ipAddress);
+}
+
+void
+CS104_Connection_setLocalPort(CS104_Connection_mStation self, int tcpPort)
+{
+    printf("CS104_Connection_setLocalPort 4001\n");
+    self->tcpPort = tcpPort;
+}
+
+int
+CS104_Connection_getOpenConnections(CS104_Connection_mStation self)
+{
+    int openConnections;
+
+#if (CONFIG_USE_THREADS == 1)
+    Semaphore_wait(self->openConnectionsLock);
+#endif
+
+    openConnections = self->openConnections;
+
+#if (CONFIG_USE_THREADS == 1)
+    Semaphore_post(self->openConnectionsLock);
+#endif
+
+    return openConnections;
+}
+
+void
+CS104_Connection_setConnectionRequestHandler(CS104_Connection_mStation self, CS104_ConnectionRequestHandler_mStation handler, void* parameter)
+{
+    printf("CS104_Connection_setConnectionRequestHandler\n");
+    self->connectionRequestHandler_mStation = handler;
+    self->connectionRequestHandlerParameter_mStation = parameter;
+}
+
+/**
+ * Activate connection and deactivate existing active connections if required
+ */
+static void
+CS104_Connection_activate(CS104_Connection_mStation self, CS104_Connection connectionToActivate)
+{
+#if (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1)
+    if (self->serverMode == CS104_MODE_SINGLE_REDUNDANCY_GROUP) {
+
+        /* Deactivate all other connections */
+#if (CONFIG_USE_THREADS == 1)
+        Semaphore_wait(self->openConnectionsLock);
+#endif
+
+        LinkedList element;
+
+        for (element = LinkedList_getNext(self->masterConnections_mStation);
+             element != NULL;
+             element = LinkedList_getNext(element))
+        {
+            CS104_Connection connection = (CS104_Connection) LinkedList_getData(element);
+
+            if (connection != connectionToActivate)
+                CS104_Connection_deactivate(connection);
+        }
+
+#if (CONFIG_USE_THREADS == 1)
+        Semaphore_post(self->openConnectionsLock);
+#endif
+
+    }
+#endif /* (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1) */
+}
+
+static void*
+serverThread_mStation (void* parameter)
+{
+    CS104_Connection_mStation self = (CS104_Connection_mStation) parameter;
+
+    ServerSocket serverSocket;
+
+    if (self->localAddress)
+        serverSocket = TcpServerSocket_create(self->localAddress, self->tcpPort);
+    else
+        serverSocket = TcpServerSocket_create("0.0.0.0", self->tcpPort);
+
+    if (serverSocket == NULL) {
+        DEBUG_PRINT("Cannot create server socket\n");
+        self->isStarting = false;
+        goto exit_function;
+    }
+
+    ServerSocket_listen(serverSocket);
+
+    self->isRunning = true;
+    self->isStarting = false;
+
+    while (self->stopRunning == false) {
+        Socket newSocket = ServerSocket_accept(serverSocket);
+
+        if (newSocket != NULL) {
+
+            bool acceptConnection = true;
+
+            /* check if maximum number of open connections is reached */  //超过最大连接数，不再接受连接
+            if (self->maxOpenConnections > 0) {
+                if (self->openConnections >= self->maxOpenConnections)
+                    acceptConnection = false;
+            }
+
+            if (acceptConnection && (self->connectionRequestHandler_mStation != NULL)) {
+                char ipAddress[60];
+
+                //get ip and port info of the new connection
+                Socket_getPeerAddressStatic(newSocket, ipAddress);
+                char* p1;
+                char* p2;
+                int port_new;
+                p1 = strtok(ipAddress, ":");
+                if(p1)
+                {
+                    strcpy(ipAddress, p1);
+                    p2 = strtok(NULL, ":");
+                    if(p2)
+                        port_new = atoi(p2);
+                }
+                else
+                {
+                    //2404
+
+                }
+
+                DEBUG_PRINT("new Connection of ipAddress = %s;p1 = %s;p2 = %s!;port = %d\n",ipAddress,p1,p2,port_new);
+
+
+//                /* remove TCP port part */
+//                char* separator = strchr(ipAddress, ':');
+//                if (separator != NULL)
+//                    *separator = 0;
+
+                //接收新的连接
+                acceptConnection = self->connectionRequestHandler_mStation(self->connectionRequestHandlerParameter_mStation,ipAddress,port_new);
+                //DEBUG_PRINT("new Connection of %s!(after strchr)\n",ipAddress);//for debug
+
+                if(acceptConnection)
+                {
+                    CS104_Connection connection = CS104_Connection_create_mStation(self, newSocket);
+                    if (connection) {
+
+    #if (CONFIG_USE_THREADS)
+                        Semaphore_wait(self->openConnectionsLock);
+    #endif
+
+                        //self->openConnections++;
+                        //LinkedList_add(self->masterConnections, connection);
+                        //================
+                        strncpy(connection->hostname, ipAddress, HOST_NAME_MAX);
+                        connection->tcpPort = port_new;
+                        bool rtn = CS104_Connection_connect_mStation(connection);
+                       if(rtn)
+                       {
+                           CS104_Connection_activate(connection->server_mStation, connection);
+                           connection->isActive = true;
+                           self->openConnections++;
+                           LinkedList_add(self->masterConnections_mStation, connection);
+
+                           CS104_Connection_sendStartDT(connection);
+                       }
+                        //================
+
+
+
+
+
+    #if (CONFIG_USE_THREADS)
+                        Semaphore_post(self->openConnectionsLock);
+    #endif
+                    }
+                    else
+                        DEBUG_PRINT("Connection attempt failed!");
+
+//                    //self->socket, self->hostname, self->tcpPort
+//                    self->connections_mStation[self->openConnections] = CS104_Connection_create_mStation(self, newSocket);
+
+//                    if (self->connections_mStation[self->openConnections])//if (connection)
+//                    {
+//                       //self->connections_mStation[self->openConnections] =  connection;
+
+//                        strncpy(self->connections_mStation[self->openConnections]->hostname, ipAddress, HOST_NAME_MAX);
+//                        self->connections_mStation[self->openConnections]->tcpPort = port_new;
+
+//                       bool rtn = CS104_Connection_connect_mStation(self->connections_mStation[self->openConnections]);
+//                       if(rtn)
+//                       {
+//                           CS104_Connection_activate(self->connections_mStation[self->openConnections]->server_mStation, self->connections_mStation[self->openConnections]);
+//                           self->connections_mStation[self->openConnections]->isActive = true;
+//                           self->openConnections++;
+//                           LinkedList_add(self->masterConnections_mStation, self->connections_mStation[self->openConnections]);
+
+//                           CS104_Connection_sendStartDT(self->connections_mStation[self->openConnections]);
+//                       }
+//                    }
+
+                }
+            }
+
+            if (acceptConnection) {
+
+
+
+//                MessageQueue lowPrioQueue = NULL;
+//                HighPriorityASDUQueue highPrioQueue = NULL;
+
+//#if (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1)
+//                if (self->serverMode == CS104_MODE_SINGLE_REDUNDANCY_GROUP) {
+//                    lowPrioQueue = self->asduQueue;
+//                    highPrioQueue = self->connectionAsduQueue;
+//                }
+//#endif
+
+//#if (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1)
+//                if (self->serverMode == CS104_MODE_CONNECTION_IS_REDUNDANCY_GROUP) {
+//                    lowPrioQueue = MessageQueue_create(self->maxLowPrioQueueSize);
+//                    highPrioQueue = HighPriorityASDUQueue_create(self->maxHighPrioQueueSize);
+//                }
+//#endif
+
+//                MasterConnection connection =
+//                        MasterConnection_create(self, newSocket, lowPrioQueue, highPrioQueue);
+
+//                if (connection) {
+
+//#if (CONFIG_USE_THREADS)
+//                    Semaphore_wait(self->openConnectionsLock);
+//#endif
+
+//                    self->openConnections++;
+//                    LinkedList_add(self->masterConnections, connection);
+
+//#if (CONFIG_USE_THREADS)
+//                    Semaphore_post(self->openConnectionsLock);
+//#endif
+//                }
+//                else
+//                    DEBUG_PRINT("Connection attempt failed!");
+
+            }
+            else {
+                Socket_destroy(newSocket);
+            }
+        }
+        else
+            Thread_sleep(10);
+    }
+
+    if (serverSocket)
+        Socket_destroy((Socket) serverSocket);
+
+    self->isRunning = false;
+    self->stopRunning = false;
+
+exit_function:
+    return NULL;
+}
+
+void
+CS104_Connection_start_mStation(CS104_Connection_mStation self)//启动监听
+{
+    printf("CS104_Connection_start_mStation\n");
+    if (self->isRunning == false) {
+    printf("self->isRunning == false\n");
+        self->isStarting = true;
+        self->isRunning = false;
+        self->stopRunning = false;
+
+//#if (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1)
+//        if (self->serverMode == CS104_MODE_SINGLE_REDUNDANCY_GROUP)
+//            initializeMessageQueues(self, self->maxLowPrioQueueSize, self->maxHighPrioQueueSize);
+//#endif
+        self->listeningThread = Thread_create(serverThread_mStation, (void*) self, false);//serverThread
+
+        Thread_start(self->listeningThread);
+
+        while (self->isStarting)
+            Thread_sleep(1);
+    }
+}
+
+bool
+CS104_Connection_isRunning_mStation(CS104_Connection_mStation self)
+{
+    return self->isRunning;
+}
+
+void
+CS104_Connection_stop_mStation(CS104_Connection_mStation self)
+{
+    if (self->isRunning) {
+        self->stopRunning = true;
+
+        while (self->isRunning)
+            Thread_sleep(1);
+    }
+
+    if (self->listeningThread) {
+        Thread_destroy(self->listeningThread);
+    }
+
+    self->listeningThread = NULL;
+}
+
+void
+CS104_Connection_destroy_mStation(CS104_Connection_mStation self)
+{
+    if (self->isRunning)
+        CS104_Connection_stop_mStation(self);
+
+//#if (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1)
+//    if (self->serverMode == CS104_MODE_SINGLE_REDUNDANCY_GROUP)
+//        MessageQueue_releaseAllQueuedASDUs(self->asduQueue);
+//#endif
+
+    if (self->localAddress != NULL)
+        GLOBAL_FREEMEM(self->localAddress);
+
+    /*
+     * Stop all connections
+     * */
+#if (CONFIG_USE_THREADS == 1)
+    Semaphore_wait(self->openConnectionsLock);
+#endif
+
+//    if(self->openConnections > 0 && self->openConnections <= 1024)
+//    {
+//        for(int i=0;i<self->openConnections;i++)
+//        {
+//            if(self->connections_mStation[i] != NULL)
+//                CS104_Connection_destroy(self->connections_mStation[i]);
+//        }
+//    }
+
+    LinkedList element;
+
+    for (element = LinkedList_getNext(self->masterConnections_mStation);
+         element != NULL;
+         element = LinkedList_getNext(element))
+    {
+        CS104_Connection connection = (CS104_Connection) LinkedList_getData(element);
+
+        CS104_Connection_close(connection);
+    }
+
+#if (CONFIG_USE_THREADS == 1)
+    Semaphore_post(self->openConnectionsLock);
+#endif
+
+    /* Wait until all connections are closed */
+    while (CS104_Connection_getOpenConnections(self) > 0)
+        Thread_sleep(10);
+
+    LinkedList_destroyStatic(self->masterConnections_mStation);
+
+#if (CONFIG_USE_THREADS == 1)
+    Semaphore_destroy(self->openConnectionsLock);
+#endif
+
+#if (CONFIG_SLAVE_WITH_STATIC_MESSAGE_QUEUE == 0)
+
+//#if (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1)
+//    if (self->serverMode == CS104_MODE_SINGLE_REDUNDANCY_GROUP) {
+//        MessageQueue_destroy(self->asduQueue);
+//        HighPriorityASDUQueue_destroy(self->connectionAsduQueue);
+//    }
+//#endif /* (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1) */
+    GLOBAL_FREEMEM(self);
+
+#endif /* (CONFIG_SLAVE_WITH_STATIC_MESSAGE_QUEUE == 0) */
+}
+
+void
+CS104_Connection_deactivate(CS104_Connection self)
+{
+    self->isActive = false;
+}
+
+static void
+CS104_Connection_removeConnection(CS104_Connection_mStation self, CS104_Connection connection)
+{
+#if (CONFIG_USE_THREADS)
+    Semaphore_wait(self->openConnectionsLock);
+#endif
+
+    self->openConnections--;
+    LinkedList_remove(self->masterConnections_mStation, (void*) connection);
+
+    CS104_Connection_destroy(connection);
+
+#if (CONFIG_USE_THREADS)
+    Semaphore_post(self->openConnectionsLock);
+#endif
+
+
+}
+
+//static void
+//CS104_Connection_destroy(CS104_Connection self)
+//{
+//    if (self) {
+
+//#if (CONFIG_CS104_SUPPORT_TLS == 1)
+//      if (self->tlsSocket != NULL)
+//          TLSSocket_close(self->tlsSocket);
+//#endif
+
+//        Socket_destroy(self->socket);
+
+//        GLOBAL_FREEMEM(self->sentASDUs);
+
+//#if (CONFIG_USE_THREADS == 1)
+//        Semaphore_destroy(self->sentASDUsLock);
+//#endif
+
+//        GLOBAL_FREEMEM(self);
+//    }
+//}
+
+
+
+//===============  104 connection : as server and as master station ==============//
