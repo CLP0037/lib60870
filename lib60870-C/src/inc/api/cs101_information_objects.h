@@ -1008,7 +1008,7 @@ void
 CommandParamSet_destroy(CommandParamSet self);
 
 CommandParamSet
-CommandParamSet_create(CommandParamSet self, int ioa, int param1, int param2, int param3);
+CommandParamSet_create(CommandParamSet self, int ioa, int param1, int param2, int param3 ,int param4);
 
 int
 CommandParamSet_getParam1(CommandParamSet self);

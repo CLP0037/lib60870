@@ -144,6 +144,10 @@ struct sCS104_Connection {
     CS104_Connection_mStation server_mStation;
     bool isActive;
 
+    //===============  104 connection : as server and as master station ==============//
+    int connection_index;//
+    //===============  104 connection : as server and as master station ==============//
+
 }connectionHandler;
 
 //===============  104 connection : as server and as master station ==============//
@@ -194,7 +198,9 @@ struct sCS104_Connection_mStation {
     Thread listeningThread;
 
     CS104_Connection connections_mStation[1024];
-
+    int history_index; // history index total
+    char* connections_ip[1024];
+    int connections_port[1024];
 
 };
 
@@ -1268,6 +1274,7 @@ CS104_Connection_station(CS104_Connection self)
 void
 CS104_Connection_setASDUReceivedHandler(CS104_Connection self, CS101_ASDUReceivedHandler handler, void* parameter)
 {
+    DEBUG_PRINT("CS104_Connection_setASDUReceivedHandler\n");//for debug
     self->receivedHandler = handler;
     self->receivedHandlerParameter = parameter;
 }
@@ -1707,7 +1714,7 @@ sCS104_Connection_mStation_create(int maxLowPrioQueueSize, int maxHighPrioQueueS
         self->tcpPort = CS104_DEFAULT_PORT;
         self->openConnections = 0;  //初始化，当前连接数=0
         self->listeningThread = NULL;
-
+        self->history_index = 0;//remenber the connection ip:port link with index_ID
 
          self->masterConnections_mStation = LinkedList_create();
 
@@ -1876,6 +1883,7 @@ serverThread_mStation (void* parameter)
 
                 if(acceptConnection)
                 {
+                    /*
                     CS104_Connection connection = CS104_Connection_create_mStation(self, newSocket);
                     if (connection) {
 
@@ -1910,28 +1918,51 @@ serverThread_mStation (void* parameter)
                     }
                     else
                         DEBUG_PRINT("Connection attempt failed!");
+                    */
 
 //                    //self->socket, self->hostname, self->tcpPort
-//                    self->connections_mStation[self->openConnections] = CS104_Connection_create_mStation(self, newSocket);
+                    int cur_index = 0;
+                    if(self->history_index <= 0 || self->history_index > 1024)//start from 1
+                        self->history_index = 1;
+                    else
+                    {
+                        //judge weather the ip:port info is in the history list
+                        cur_index = get_connectionIndex_mStation(self ,ipAddress,port_new);
 
-//                    if (self->connections_mStation[self->openConnections])//if (connection)
-//                    {
-//                       //self->connections_mStation[self->openConnections] =  connection;
+                        if(cur_index < 0)// || cur_index >= 1024
+                        {
+                            self->history_index++;
+                            cur_index = self->history_index -1;
+                        }
+                    }
+                    self->connections_mStation[cur_index] = CS104_Connection_create_mStation(self, newSocket);
 
-//                        strncpy(self->connections_mStation[self->openConnections]->hostname, ipAddress, HOST_NAME_MAX);
-//                        self->connections_mStation[self->openConnections]->tcpPort = port_new;
+                    if (self->connections_mStation[cur_index])
+                    {
+#if (CONFIG_USE_THREADS)
+                    Semaphore_wait(self->openConnectionsLock);
+#endif
 
-//                       bool rtn = CS104_Connection_connect_mStation(self->connections_mStation[self->openConnections]);
-//                       if(rtn)
-//                       {
-//                           CS104_Connection_activate(self->connections_mStation[self->openConnections]->server_mStation, self->connections_mStation[self->openConnections]);
-//                           self->connections_mStation[self->openConnections]->isActive = true;
-//                           self->openConnections++;
-//                           LinkedList_add(self->masterConnections_mStation, self->connections_mStation[self->openConnections]);
+                        strncpy(self->connections_mStation[cur_index]->hostname, ipAddress, HOST_NAME_MAX);
+                        self->connections_mStation[cur_index]->tcpPort = port_new;
+                        self->connections_mStation[cur_index]->connection_index = cur_index;//start from 0
 
-//                           CS104_Connection_sendStartDT(self->connections_mStation[self->openConnections]);
-//                       }
-//                    }
+                       bool rtn = CS104_Connection_connect_mStation(self->connections_mStation[cur_index]);
+                       if(rtn)
+                       {
+                           CS104_Connection_activate(self->connections_mStation[cur_index]->server_mStation, self->connections_mStation[cur_index]);
+                           self->connections_mStation[cur_index]->isActive = true;
+                           self->openConnections++;
+                           LinkedList_add(self->masterConnections_mStation, self->connections_mStation[cur_index]);
+
+                           CS104_Connection_sendStartDT(self->connections_mStation[cur_index]);
+                       }
+    #if (CONFIG_USE_THREADS)
+                        Semaphore_post(self->openConnectionsLock);
+    #endif
+                }
+                else
+                    DEBUG_PRINT("Connection attempt failed!");
 
                 }
             }
@@ -2114,6 +2145,178 @@ CS104_Connection_deactivate(CS104_Connection self)
 {
     self->isActive = false;
 }
+
+int get_connectionIndex_mStation(CS104_Connection_mStation self,char* ip_temp,int port_temp)
+{
+    if(self->history_index <= 0 || self->history_index > 1024)
+        return -1;
+    //int strcmp(const char* s1,const char* s2)
+    for(int i=0;i<(self->history_index - 1);i++)
+    {
+        if(self->connections_mStation[i] == NULL)
+            return -1;
+        if(strcmp(self->connections_mStation[i]->hostname,ip_temp)==0 && self->connections_mStation[i]->tcpPort == port_temp)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void
+CS104_Connection_setASDUReceivedHandler_mStation(CS104_Connection_mStation self, CS101_ASDUReceivedHandler handler, void* parameter,int con_index)
+
+{
+//    self->receivedHandler = handler;
+//    self->receivedHandlerParameter = parameter;
+
+//    for(int i=0;i<1024;i++)
+//    {
+//        if(self->connections_mStation[i] != NULL)
+//            CS104_Connection_setASDUReceivedHandler(self->connections_mStation[i],handler,parameter);
+//    }
+    DEBUG_PRINT("CS104_Connection_setASDUReceivedHandler for the %d connection",con_index);
+    if(con_index < 0 || con_index > 1024)
+        return ;
+    if(self->connections_mStation[con_index] != NULL)
+        CS104_Connection_setASDUReceivedHandler(self->connections_mStation[con_index],handler,parameter);
+}
+
+CS104_Connection
+get_connection_from_mStation(CS104_Connection_mStation self,int con_index)
+{
+    if(self == NULL || con_index<0 || con_index > 1024)
+        return NULL;
+
+    //CS104_Connection con = self->connections_mStation[con_index];
+    return self->connections_mStation[con_index];
+}
+
+char*
+CS104_Connection_getConnections_IP(CS104_Connection self)
+{
+    if(self == NULL)
+        return "";
+    return (char*)(self->hostname);
+}
+
+int
+CS104_Connection_getConnections_Port(CS104_Connection self)
+{
+    if(self == NULL)
+        return 0;
+    return self->tcpPort;
+}
+
+int //启动链路
+CS104_Connection_sendStartDT_mStation(CS104_Connection_mStation self,char* ip,int port)
+{
+    int con_index;
+    con_index = get_connectionIndex_mStation(self,ip,port);
+
+    if(con_index < 0)
+    {
+       return -1;//没有当前IP:Port对应的设备建立过连接
+    }
+
+    if(self == NULL || self->connections_mStation[con_index] == NULL)
+    {
+        return -1;
+    }
+
+    if(CS104_Connection_station(self->connections_mStation[con_index])==false)
+    {
+        return -1;//设备不在线
+    }
+
+    CS104_Connection_sendStartDT(self->connections_mStation[con_index]);
+    return 0;
+}
+
+int //总召
+CS104_Connection_sendInterrogationCommand_mStation(CS104_Connection_mStation self,char* ip,int port, int ca)
+{
+    int con_index;
+    con_index = get_connectionIndex_mStation(self,ip,port);
+
+    if(con_index < 0)
+    {
+       return -1;//没有当前IP:Port对应的设备建立过连接
+    }
+
+    if(self == NULL || self->connections_mStation[con_index] == NULL)
+    {
+        return -1;
+    }
+
+    if(CS104_Connection_station(self->connections_mStation[con_index])==false)
+    {
+        return -1;//设备不在线
+    }
+
+    CS104_Connection_sendInterrogationCommand(self->connections_mStation[con_index], CS101_COT_ACTIVATION, ca, IEC60870_QOI_STATION);
+
+    return 0;
+}
+
+int // 测试帧
+CS104_Connection_sendTestCommand_mStation(CS104_Connection_mStation self,char* ip,int port, int ca)
+{
+    int con_index;
+    con_index = get_connectionIndex_mStation(self,ip,port);
+
+    if(con_index < 0)
+    {
+       return -1;//没有当前IP:Port对应的设备建立过连接
+    }
+
+    if(self == NULL || self->connections_mStation[con_index] == NULL)
+    {
+        return -1;
+    }
+
+    if(CS104_Connection_station(self->connections_mStation[con_index])==false)
+    {
+        return -1;//设备不在线
+    }
+
+    CS104_Connection_sendTestCommand(self->connections_mStation[con_index],ca);
+
+    return 0;
+}
+
+int //对时
+CS104_Connection_sendClockSyncCommand_SetandRead_mStation(CS104_Connection_mStation self,char* ip,int port, int ca, int cot,unsigned char* time)
+{
+    int con_index;
+    con_index = get_connectionIndex_mStation(self,ip,port);
+
+    if(con_index < 0)
+    {
+       return -1;//没有当前IP:Port对应的设备建立过连接
+    }
+
+    if(self == NULL || self->connections_mStation[con_index] == NULL)
+    {
+        return -1;
+    }
+
+    if(CS104_Connection_station(self->connections_mStation[con_index])==false)
+    {
+        return -1;//设备不在线
+    }
+
+    CS104_Connection_sendClockSyncCommand_SetandRead(self->connections_mStation[con_index],ca,cot,time);
+
+    return 0;
+
+}
+
+
+
+
+
+
 
 static void
 CS104_Connection_removeConnection(CS104_Connection_mStation self, CS104_Connection connection)

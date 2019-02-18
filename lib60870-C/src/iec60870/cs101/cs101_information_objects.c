@@ -4511,6 +4511,7 @@ CommandParamSet_encode(CommandParamSet self, Frame frame, CS101_AppLayerParamete
 
     InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
 
+    Frame_setNextByte(frame, (self->param4)&0xff);
     Frame_setNextByte(frame, (self->param1)&0xff);
     Frame_setNextByte(frame, 0x00);
     Frame_setNextByte(frame, (self->param2)&0xff);
@@ -4539,7 +4540,7 @@ CommandParamSet_destroy(CommandParamSet self)
 }
 
 CommandParamSet
-CommandParamSet_create(CommandParamSet self, int ioa, int param1, int param2, int param3)
+CommandParamSet_create(CommandParamSet self, int ioa, int param1, int param2, int param3 ,int param4)
 {
     if (self == NULL)
         self = (CommandParamSet) GLOBAL_MALLOC(sizeof(struct sCommandParamSet));
@@ -4552,6 +4553,7 @@ CommandParamSet_create(CommandParamSet self, int ioa, int param1, int param2, in
         self->param1 = param1;
         self->param2 = param2;
         self->param3 = param3;
+        self->param4 = param4;
     }
 
     return self;
@@ -4593,6 +4595,9 @@ CommandParamSet_getFromBuffer(CommandParamSet self, CS101_AppLayerParameters par
         startIndex += parameters->sizeOfIOA; /* skip IOA */
 
         /* param */
+        self->param4 = msg[startIndex];
+        startIndex++;
+
         self->param1 = msg[startIndex];
         startIndex++;
         self->param2 = msg[startIndex];

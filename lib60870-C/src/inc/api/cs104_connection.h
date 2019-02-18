@@ -414,10 +414,33 @@ CS104_Connection_destroy_mStation(CS104_Connection_mStation self);
 void
 CS104_Connection_deactivate(CS104_Connection self);
 
+int get_connectionIndex_mStation(CS104_Connection_mStation self,char* ip_temp,int port_temp);
+
+void
+CS104_Connection_setASDUReceivedHandler_mStation(CS104_Connection_mStation self, CS101_ASDUReceivedHandler handler, void* parameter,int con_index);
+
+CS104_Connection
+get_connection_from_mStation(CS104_Connection_mStation self,int con_index);
+
+char*
+CS104_Connection_getConnections_IP(CS104_Connection self);
+
+int
+CS104_Connection_getConnections_Port(CS104_Connection self);
 
 
 
+int //启动链路
+CS104_Connection_sendStartDT_mStation(CS104_Connection_mStation self,char* ip,int port);
 
+int //总召
+CS104_Connection_sendInterrogationCommand_mStation(CS104_Connection_mStation self,char* ip,int port, int ca);
+
+int // 测试帧
+CS104_Connection_sendTestCommand_mStation(CS104_Connection_mStation self,char* ip,int port, int ca);
+
+int //对时
+CS104_Connection_sendClockSyncCommand_SetandRead_mStation(CS104_Connection_mStation self,char* ip,int port, int ca, int cot,unsigned char* time);
 
 //===============  104 connection : as server and as master station ==============//
 
