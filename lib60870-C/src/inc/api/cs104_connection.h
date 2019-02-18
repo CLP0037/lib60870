@@ -74,7 +74,7 @@ CS104_Connection
 CS104_Connection_create(const char* hostname, int tcpPort);
 
 CS104_Connection
-CS104_Connection_create_mStation(CS104_Connection slave, Socket socket);
+CS104_Connection_create_mStation(CS104_Connection_mStation slave, Socket socket);
 
 /**
  * \brief Create a new secure connection object (uses TLS)
