@@ -26,6 +26,9 @@
 #include <stdint.h>
 #include "tls_api.h"
 #include "iec60870_master.h"
+#include "iec60870_slave.h"//
+#include "frame.h"
+#include "buffer_frame.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -394,6 +397,10 @@ CS104_Connection_getOpenConnections(CS104_Connection_mStation self);
 void
 CS104_Connection_setConnectionRequestHandler(CS104_Connection_mStation self, CS104_ConnectionRequestHandler_mStation handler, void* parameter);
 
+//void
+//CS104_Connection_setASDUReceivedHandler_mStation0(CS104_Connection self, CS101_ASDUReceivedHandler handler, void* parameter);
+
+
 /**
  * \brief State the CS 104 slave. The slave (server) will listen on the configured TCP/IP port
  *
@@ -417,7 +424,18 @@ CS104_Connection_deactivate(CS104_Connection self);
 int get_connectionIndex_mStation(CS104_Connection_mStation self,char* ip_temp,int port_temp);
 
 void
+CS104_Connection_setMSGReceivedHandler_m(CS104_Connection self, CS104_MSGReceivedHandler_mStation handler, void* parameter);
+void
+CS104_Connection_setMSGSendHandler_m(CS104_Connection self, CS104_MSGSendHandler_mStation handler, void* parameter);
+
+void
 CS104_Connection_setASDUReceivedHandler_mStation(CS104_Connection_mStation self, CS101_ASDUReceivedHandler handler, void* parameter,int con_index);
+
+void
+CS104_Connection_setMSGReceivedHandler_mStation(CS104_Connection_mStation self, CS104_MSGReceivedHandler_mStation handler, void* parameter,int con_index);
+
+void
+CS104_Connection_setMSGSendHandler_mStation(CS104_Connection_mStation self, CS104_MSGSendHandler_mStation handler, void* parameter,int con_index);
 
 CS104_Connection
 get_connection_from_mStation(CS104_Connection_mStation self,int con_index);
@@ -444,6 +462,43 @@ CS104_Connection_sendClockSyncCommand_SetandRead_mStation(CS104_Connection_mStat
 
 //===============  104 connection : as server and as master station ==============//
 
+
+//===============  104 connection : as client and as slave device(simulation equipment) ==============//
+CS104_Connection
+CS104_Connection_create_sDEV(const char* hostname, int tcpPort);
+
+void
+CS104_Connection_setAsduHandler_sDEV(CS104_Connection self, CS101_ASDUHandler handler, void* parameter);
+
+void
+CS104_Connection_InterrogationHandler_sDEV(CS104_Connection self, CS101_InterrogationHandler handler, void* parameter);
+
+void
+CS104_Connection_CounterInterrogationHandler_sDEV(CS104_Connection self, CS101_CounterInterrogationHandler handler, void* parameter);
+
+void
+CS104_Connection_ReadHandler_sDEV(CS104_Connection self, CS101_ReadHandler handler, void* parameter);
+
+void
+CS104_Connection_ClockSynchronizationHandler_sDEV(CS104_Connection self, CS101_ClockSynchronizationHandler handler, void* parameter);
+
+void
+CS104_Connection_ResetProcessHandler_sDEV(CS104_Connection self, CS101_ResetProcessHandler handler, void* parameter);
+
+void
+CS104_Connection_DelayAcquisitionHandler_sDEV(CS104_Connection self, CS101_DelayAcquisitionHandler handler, void* parameter);
+
+
+bool
+CS104_Connection_connect_sDEV(CS104_Connection self);
+
+
+
+
+
+
+
+//===============  104 connection : as client and as slave device(simulation equipment) ==============//
 
 
 /*! @} */

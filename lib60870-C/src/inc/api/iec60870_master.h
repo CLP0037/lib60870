@@ -54,6 +54,9 @@ typedef bool (*CS104_MSGReceivedHandler) (void* parameter, uint8_t* buffer, int 
 //CS104_MSGSendHandler
 typedef bool (*CS104_MSGSendHandler) (void* parameter, uint8_t* buffer, int msgSize);//, CS101_ASDU asdu
 
+typedef bool (*CS104_MSGReceivedHandler_mStation) (void* parameter, uint8_t* buffer, int msgSize,char* ip,int port);
+typedef bool (*CS104_MSGSendHandler_mStation) (void* parameter, uint8_t* buffer, int msgSize,char* ip,int port);
+
 //_withExplain
 typedef struct
 {

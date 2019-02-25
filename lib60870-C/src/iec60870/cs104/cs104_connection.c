@@ -146,7 +146,45 @@ struct sCS104_Connection {
 
     //===============  104 connection : as server and as master station ==============//
     int connection_index;//
+    //报文收发
+    CS104_MSGReceivedHandler_mStation msgreceivedHandler_mStation;
+    void* msgreceivedHandlerParameter_mStation;
+
+    CS104_MSGSendHandler_mStation msgsendHandler_mStation;
+    void* msgsendHandlerParameter_mStation;
     //===============  104 connection : as server and as master station ==============//
+
+
+    //===============  104 connection : as client and as slave device(simulation equipment) ==============//
+    CS101_InterrogationHandler interrogationHandler;
+    void* interrogationHandlerParameter;
+
+    CS101_CounterInterrogationHandler counterInterrogationHandler;
+    void* counterInterrogationHandlerParameter;
+
+    CS101_ReadHandler readHandler;
+    void* readHandlerParameter;
+
+    CS101_ClockSynchronizationHandler clockSyncHandler;
+    void* clockSyncHandlerParameter;
+
+    CS101_ResetProcessHandler resetProcessHandler;
+    void* resetProcessHandlerParameter;
+
+    CS101_DelayAcquisitionHandler delayAcquisitionHandler;
+    void* delayAcquisitionHandlerParameter;
+
+    CS101_ASDUHandler asduHandler;
+    void* asduHandlerParameter;
+
+#if (CONFIG_USE_THREADS == 1)
+    Semaphore sentASDUsLock_sDEV;
+    //Thread connectionHandlingThread_sDEV;
+#endif
+
+    struct sIMasterConnection iMasterConnection;
+
+    //===============  104 connection : as client and as slave device(simulation equipment) ==============//
 
 }connectionHandler;
 
@@ -160,6 +198,7 @@ struct sCS104_Connection_mStation {
 
     CS104_ConnectionRequestHandler_mStation connectionRequestHandler_mStation;
     void* connectionRequestHandlerParameter_mStation;
+
 
 #if (CONFIG_CS104_SUPPORT_TLS == 1)
     TLSConfiguration tlsConfig;
@@ -208,6 +247,18 @@ struct sCS104_Connection_mStation {
 
 //===============  104 connection : as server and as master station ==============//
 
+//===============  104 connection : as client and as slave device(simulation equipment) ==============//
+struct sCS104_Connection_sDEV{
+
+
+
+};
+
+static uint8_t STOPDT_CON_MSG[] = { 0x68, 0x04, 0x23, 0x00, 0x00, 0x00 };
+
+#define STOPDT_CON_MSG_SIZE 6
+//===============  104 connection : as client and as slave device(simulation equipment) ==============//
+
 static uint8_t STARTDT_ACT_MSG[] = { 0x68, 0x04, 0x07, 0x00, 0x00, 0x00 };
 #define STARTDT_ACT_MSG_SIZE 6
 
@@ -229,7 +280,8 @@ writeToSocket(CS104_Connection self, uint8_t* buf, int size)
     if (size > 0) {
         if (self->msgsendHandler != NULL)
             self->msgsendHandler(self->msgsendHandlerParameter, buf, size);
-
+        if (self->msgsendHandler_mStation != NULL)
+            self->msgsendHandler_mStation(self->msgsendHandlerParameter_mStation, buf, size,self->hostname,self->tcpPort);
     }
 #if (CONFIG_CS104_SUPPORT_TLS == 1)
     if (self->tlsSocket)
@@ -329,6 +381,11 @@ createConnection(const char* hostname, int tcpPort)
         self->msgreceivedHandlerParameter = NULL;
         self->msgsendHandler = NULL;
         self->msgsendHandlerParameter = NULL;
+        //
+        self->msgsendHandler_mStation = NULL;
+        self->msgsendHandlerParameter_mStation = NULL;
+        self->msgreceivedHandler_mStation = NULL;
+        self->msgreceivedHandlerParameter_mStation = NULL;
 
         //_withExplain
         self->msgreceivedHandler_withExplain = NULL;
@@ -397,6 +454,11 @@ CS104_Connection_create_mStation(CS104_Connection_mStation slave, Socket socket)
         self->msgreceivedHandlerParameter = NULL;
         self->msgsendHandler = NULL;
         self->msgsendHandlerParameter = NULL;
+        //
+        self->msgsendHandler_mStation = NULL;
+        self->msgsendHandlerParameter_mStation = NULL;
+        self->msgreceivedHandler_mStation = NULL;
+        self->msgreceivedHandlerParameter_mStation = NULL;
 
         //_withExplain
         self->msgreceivedHandler_withExplain = NULL;
@@ -424,6 +486,8 @@ CS104_Connection_create_mStation(CS104_Connection_mStation slave, Socket socket)
 #endif
 
         self->sentASDUs = NULL;
+
+
     }
     return self;
 }
@@ -1044,7 +1108,7 @@ handleConnection(void* parameter)
                         if (checkMessage(self, buffer, bytesRec) == false) {
                             /* close connection on error */
                             loopRunning= false;
-                            DEBUG_PRINT("loopRunning is set false,checkMessage(self, buffer, bytesRec) is false");//\n
+                            DEBUG_PRINT("loopRunning is set false,checkMessage(self, buffer, bytesRec) is false\n");//
                             if (self->importantInfoHandler != NULL)
                                 self->importantInfoHandler(self->importantInfoHandlerParameter, "loopRunning is set false,checkMessage(self, buffer, bytesRec) return false!");
                             self->failure = true;
@@ -1061,7 +1125,7 @@ handleConnection(void* parameter)
                 if (handleTimeouts(self) == false)
                 {
                     loopRunning = false;
-                    DEBUG_PRINT("loopRunning is set false,handleTimeouts(self) is false");//\n
+                    DEBUG_PRINT("loopRunning is set false,handleTimeouts(self) is false\n");//
                     if (self->importantInfoHandler != NULL)
                         self->importantInfoHandler(self->importantInfoHandlerParameter, "loopRunning is set false,handleTimeouts(self) return false!");
                 }
@@ -1069,7 +1133,7 @@ handleConnection(void* parameter)
                 if (self->close)
                 {
                     loopRunning = false;
-                    DEBUG_PRINT("loopRunning is set false,self->close is true");//\n
+                    DEBUG_PRINT("loopRunning is set false,self->close is true\n");//
                     if (self->importantInfoHandler != NULL)
                         self->importantInfoHandler(self->importantInfoHandlerParameter, "loopRunning is set false,self->close is true!");
                 }
@@ -1105,9 +1169,8 @@ handleConnection(void* parameter)
     return NULL;
 }
 
-//handleConnection_mStation
 static void*
-handleConnection_mStation(void* parameter)
+handleConnection_mStation(void* parameter)//
 {
     CS104_Connection self = (CS104_Connection) parameter;
     resetConnection(self);
@@ -1153,6 +1216,8 @@ handleConnection_mStation(void* parameter)
             if (bytesRec > 0) {
                 DEBUG_PRINT("Connection: rcvd msg(%i bytes)\n", bytesRec);
 
+                if (self->msgreceivedHandler_mStation != NULL)
+                    self->msgreceivedHandler_mStation(self->msgreceivedHandlerParameter_mStation, buffer, bytesRec,self->hostname,self->tcpPort);
                 if (checkMessage(self, buffer, bytesRec) == false) {
                     /* close connection on error */
                     loopRunning= false;
@@ -1777,6 +1842,14 @@ CS104_Connection_setConnectionRequestHandler(CS104_Connection_mStation self, CS1
     self->connectionRequestHandlerParameter_mStation = parameter;
 }
 
+//void
+//CS104_Connection_setASDUReceivedHandler_mStation0(CS104_Connection self, CS101_ASDUReceivedHandler handler, void* parameter)
+//{
+//    DEBUG_PRINT("CS104_Connection_setASDUReceivedHandler\n");//for debug
+//    self->asduHandler_mStation = handler;
+//    self->asduHandlerParameter_mStation = parameter;
+//}
+
 /**
  * Activate connection and deactivate existing active connections if required
  */
@@ -1847,14 +1920,14 @@ serverThread_mStation (void* parameter)
                     acceptConnection = false;
             }
 
+            char ipAddress[60];
+            int port_new;
             if (acceptConnection && (self->connectionRequestHandler_mStation != NULL)) {
-                char ipAddress[60];
-
                 //get ip and port info of the new connection
                 Socket_getPeerAddressStatic(newSocket, ipAddress);
                 char* p1;
                 char* p2;
-                int port_new;
+
                 p1 = strtok(ipAddress, ":");
                 if(p1)
                 {
@@ -1877,9 +1950,9 @@ serverThread_mStation (void* parameter)
 //                if (separator != NULL)
 //                    *separator = 0;
 
-                //接收新的连接
-                acceptConnection = self->connectionRequestHandler_mStation(self->connectionRequestHandlerParameter_mStation,ipAddress,port_new);
-                //DEBUG_PRINT("new Connection of %s!(after strchr)\n",ipAddress);//for debug
+//                //接收新的连接
+//                acceptConnection = self->connectionRequestHandler_mStation(self->connectionRequestHandlerParameter_mStation,ipAddress,port_new);
+//                //DEBUG_PRINT("new Connection of %s!(after strchr)\n",ipAddress);//for debug
 
                 if(acceptConnection)
                 {
@@ -1966,6 +2039,10 @@ serverThread_mStation (void* parameter)
 
                 }
             }
+
+            //接收新的连接
+            acceptConnection = self->connectionRequestHandler_mStation(self->connectionRequestHandlerParameter_mStation,ipAddress,port_new);
+            //DEBUG_PRINT("new Connection of %s!(after strchr)\n",ipAddress);//for debug
 
             if (acceptConnection) {
 
@@ -2151,7 +2228,7 @@ int get_connectionIndex_mStation(CS104_Connection_mStation self,char* ip_temp,in
     if(self->history_index <= 0 || self->history_index > 1024)
         return -1;
     //int strcmp(const char* s1,const char* s2)
-    for(int i=0;i<(self->history_index - 1);i++)
+    for(int i=0;i<self->history_index;i++)
     {
         if(self->connections_mStation[i] == NULL)
             return -1;
@@ -2164,8 +2241,21 @@ int get_connectionIndex_mStation(CS104_Connection_mStation self,char* ip_temp,in
 }
 
 void
-CS104_Connection_setASDUReceivedHandler_mStation(CS104_Connection_mStation self, CS101_ASDUReceivedHandler handler, void* parameter,int con_index)
+CS104_Connection_setMSGReceivedHandler_m(CS104_Connection self, CS104_MSGReceivedHandler_mStation handler, void* parameter)
+{
+    self->msgreceivedHandler_mStation = handler;
+    self->msgreceivedHandlerParameter_mStation = parameter;
+}
 
+void
+CS104_Connection_setMSGSendHandler_m(CS104_Connection self, CS104_MSGSendHandler_mStation handler, void* parameter)
+{
+    self->msgsendHandler_mStation = handler;
+    self->msgsendHandlerParameter_mStation = parameter;
+}
+
+void
+CS104_Connection_setASDUReceivedHandler_mStation(CS104_Connection_mStation self, CS101_ASDUReceivedHandler handler, void* parameter,int con_index)
 {
 //    self->receivedHandler = handler;
 //    self->receivedHandlerParameter = parameter;
@@ -2179,7 +2269,36 @@ CS104_Connection_setASDUReceivedHandler_mStation(CS104_Connection_mStation self,
     if(con_index < 0 || con_index > 1024)
         return ;
     if(self->connections_mStation[con_index] != NULL)
+    {
         CS104_Connection_setASDUReceivedHandler(self->connections_mStation[con_index],handler,parameter);
+        //CS104_Connection_setASDUReceivedHandler_mStation0(self->connections_mStation[con_index],handler,parameter);
+    }
+}
+
+void
+CS104_Connection_setMSGReceivedHandler_mStation(CS104_Connection_mStation self, CS104_MSGReceivedHandler_mStation handler, void* parameter,int con_index)
+{
+    DEBUG_PRINT("CS104_Connection_setMSGReceivedHandler_mStation for the %d connection",con_index);
+    if(con_index < 0 || con_index > 1024)
+        return ;
+    if(self->connections_mStation[con_index] != NULL)
+    {
+        CS104_Connection_setMSGReceivedHandler_m(self->connections_mStation[con_index],handler,parameter);
+        //CS104_Connection_setMSGReceivedHandler(self->connections_mStation[con_index],handler,parameter);
+    }
+}
+
+void
+CS104_Connection_setMSGSendHandler_mStation(CS104_Connection_mStation self, CS104_MSGSendHandler_mStation handler, void* parameter,int con_index)
+{
+    DEBUG_PRINT("CS104_Connection_setMSGSendHandler_mStation for the %d connection",con_index);
+    if(con_index < 0 || con_index > 1024)
+        return ;
+    if(self->connections_mStation[con_index] != NULL)
+    {
+        CS104_Connection_setMSGSendHandler_m(self->connections_mStation[con_index],handler,parameter);
+        //CS104_Connection_setMSGSendHandler(self->connections_mStation[con_index],handler,parameter);
+    }
 }
 
 CS104_Connection
@@ -2362,3 +2481,690 @@ CS104_Connection_removeConnection(CS104_Connection_mStation self, CS104_Connecti
 
 
 //===============  104 connection : as server and as master station ==============//
+
+
+//===============  104 connection : as client and as slave device(simulation equipment) ==============//
+typedef struct {
+    uint8_t msg[256];
+    int msgSize;
+} FrameBuffer;
+/********************************************
+ * IMasterConnection(from cs104_slave)
+ *******************************************/
+static int
+sendIMessage_sDEV(CS104_Connection self, uint8_t* buffer, int msgSize)
+{
+    buffer[0] = (uint8_t) 0x68;
+    buffer[1] = (uint8_t) (msgSize - 2);
+
+    buffer[2] = (uint8_t) ((self->sendCount % 128) * 2);
+    buffer[3] = (uint8_t) (self->sendCount / 128);
+
+    buffer[4] = (uint8_t) ((self->receiveCount % 128) * 2);
+    buffer[5] = (uint8_t) (self->receiveCount / 128);
+
+    if (writeToSocket(self, buffer, msgSize) != -1) {
+        DEBUG_PRINT("SEND I (size = %i) N(S) = %i N(R) = %i\n", msgSize, self->sendCount, self->receiveCount);
+        self->sendCount = (self->sendCount + 1) % 32768;
+        self->unconfirmedReceivedIMessages = 0;
+    }
+    else
+        self->running = false;
+
+    self->unconfirmedReceivedIMessages = 0;
+
+    return self->sendCount;
+}
+
+static void
+sendASDU_sDEV(CS104_Connection self, FrameBuffer* asdu, uint64_t timestamp, int index)
+{
+    int currentIndex = 0;
+
+    if (self->oldestSentASDU == -1) {
+        self->oldestSentASDU = 0;
+        self->newestSentASDU = 0;
+    }
+    else {
+        currentIndex = (self->newestSentASDU + 1) % self->maxSentASDUs;
+    }
+
+    //self->sentASDUs[currentIndex].entryTime = timestamp;
+    //self->sentASDUs[currentIndex].queueIndex = index;
+    self->sentASDUs[currentIndex].seqNo = sendIMessage_sDEV(self, asdu->msg, asdu->msgSize);
+    self->sentASDUs[currentIndex].sentTime = Hal_getTimeInMs();
+
+    self->newestSentASDU = currentIndex;
+
+    //printSendBuffer(self);
+}
+
+static bool
+sendASDUInternal_sDEV(CS104_Connection self, CS101_ASDU asdu)
+{
+    bool asduSent;
+
+    if (self->isActive) {
+
+#if (CONFIG_USE_THREADS == 1)
+        Semaphore_wait(self->sentASDUsLock);
+#endif
+
+        if (isSentBufferFull(self) == false) {
+
+            FrameBuffer frameBuffer;
+
+            struct sBufferFrame bufferFrame;
+
+            Frame frame = BufferFrame_initialize(&bufferFrame, frameBuffer.msg, IEC60870_5_104_APCI_LENGTH);
+            CS101_ASDU_encode(asdu, frame);
+
+            frameBuffer.msgSize = Frame_getMsgSize(frame);
+
+            sendASDU_sDEV(self, &frameBuffer, 0, -1);
+
+#if (CONFIG_USE_THREADS == 1)
+            Semaphore_post(self->sentASDUsLock);
+#endif
+
+            asduSent = true;
+        }
+        else {
+#if (CONFIG_USE_THREADS == 1)
+            Semaphore_post(self->sentASDUsLock);
+#endif
+            //asduSent = HighPriorityASDUQueue_enqueue(self->highPrioQueue, asdu);
+            asduSent = false;
+        }
+
+    }
+    else
+        asduSent = false;
+
+    if (asduSent == false)
+        DEBUG_PRINT("unable to send response (isActive=%i)\n", self->isActive);
+
+    return asduSent;
+}
+
+static void
+_sendASDU(IMasterConnection self, CS101_ASDU asdu)
+{
+    CS104_Connection con = (CS104_Connection) self->object;
+
+    sendASDUInternal_sDEV(con, asdu);
+}
+
+static void
+_sendACT_CON(IMasterConnection self, CS101_ASDU asdu, bool negative)
+{
+    CS101_ASDU_setCOT(asdu, CS101_COT_ACTIVATION_CON);
+    CS101_ASDU_setNegative(asdu, negative);
+
+    _sendASDU(self, asdu);
+}
+
+static void
+_sendACT_TERM(IMasterConnection self, CS101_ASDU asdu)
+{
+    CS101_ASDU_setCOT(asdu, CS101_COT_ACTIVATION_TERMINATION);
+    CS101_ASDU_setNegative(asdu, false);
+
+    _sendASDU(self, asdu);
+}
+
+static CS101_AppLayerParameters
+_getApplicationLayerParameters(IMasterConnection self)
+{
+    CS104_Connection con = (CS104_Connection) self->object;
+
+    return &(con->alParameters);
+}
+
+/********************************************
+ * END IMasterConnection
+ *******************************************/
+
+CS104_Connection
+CS104_Connection_create_sDEV(const char* hostname, int tcpPort)
+{
+    CS104_Connection self = (CS104_Connection) GLOBAL_MALLOC(sizeof(struct sCS104_Connection));
+
+    if (self != NULL) {
+        strncpy(self->hostname, hostname, HOST_NAME_MAX);
+        self->tcpPort = tcpPort;
+        self->parameters = defaultAPCIParameters;
+        self->alParameters = defaultAppLayerParameters;
+
+        self->receivedHandler = NULL;
+        self->receivedHandlerParameter = NULL;
+
+        self->connectionHandler = NULL;
+        self->connectionHandlerParameter = NULL;
+
+        self->msgreceivedHandler = NULL;
+        self->msgreceivedHandlerParameter = NULL;
+        self->msgsendHandler = NULL;
+        self->msgsendHandlerParameter = NULL;
+        //
+        self->msgsendHandler_mStation = NULL;
+        self->msgsendHandlerParameter_mStation = NULL;
+        self->msgreceivedHandler_mStation = NULL;
+        self->msgreceivedHandlerParameter_mStation = NULL;
+
+        //_withExplain
+        self->msgreceivedHandler_withExplain = NULL;
+        self->msgreceivedHandlerParameter_withExplain = NULL;
+        self->msgsendHandler_withExplain = NULL;
+        self->msgsendHandlerParameter_withExplain = NULL;
+        self->cs104_frame.TI = 0;
+        self->cs104_frame.COT = 0;
+        self->cs104_frame.VSQ = 0;
+        self->cs104_frame.NS = 0;
+        self->cs104_frame.NR = 0;
+        self->cs104_frame.EC = 0;
+        self->cs104_frame.FT = 0;
+
+        self->importantInfoHandler = NULL;
+        self->importantInfoHandlerParameter = NULL;
+#if (CONFIG_USE_THREADS == 1)
+        self->sentASDUsLock = Semaphore_create(1);
+        self->connectionHandlingThread = NULL;
+#endif
+
+#if (CONFIG_CS104_SUPPORT_TLS == 1)
+        self->tlsConfig = NULL;
+        self->tlsSocket = NULL;
+#endif
+
+        self->sentASDUs = NULL;
+
+        //slave DEV
+        self->asduHandler = NULL;
+        self->interrogationHandler = NULL;
+        self->counterInterrogationHandler = NULL;
+        self->readHandler = NULL;
+        self->clockSyncHandler = NULL;
+        self->resetProcessHandler = NULL;
+        self->delayAcquisitionHandler = NULL;
+        //self->connectionRequestHandler = NULL;
+#if (CONFIG_USE_THREADS == 1)
+        self->sentASDUsLock_sDEV = Semaphore_create(1);
+        //self->connectionHandlingThread_sDEV = NULL;
+#endif
+
+        self->iMasterConnection.object = self;
+        self->iMasterConnection.getApplicationLayerParameters = _getApplicationLayerParameters;
+        self->iMasterConnection.sendASDU = _sendASDU;
+        self->iMasterConnection.sendACT_CON = _sendACT_CON;
+        self->iMasterConnection.sendACT_TERM = _sendACT_TERM;
+
+        prepareSMessage(self->sMessage);
+    }
+
+    return self;
+}
+
+void
+CS104_Connection_setAsduHandler_sDEV(CS104_Connection self, CS101_ASDUHandler handler, void* parameter)
+{
+    self->asduHandler = handler;
+    self->asduHandlerParameter = parameter;
+}
+
+void
+CS104_Connection_InterrogationHandler_sDEV(CS104_Connection self, CS101_InterrogationHandler handler, void* parameter)
+{
+    self->interrogationHandler = handler;
+    self->interrogationHandlerParameter = parameter;
+}
+
+void
+CS104_Connection_CounterInterrogationHandler_sDEV(CS104_Connection self, CS101_CounterInterrogationHandler handler, void* parameter)
+{
+    self->counterInterrogationHandler = handler;
+    self->counterInterrogationHandlerParameter = parameter;
+}
+
+void
+CS104_Connection_ReadHandler_sDEV(CS104_Connection self, CS101_ReadHandler handler, void* parameter)
+{
+    self->readHandler = handler;
+    self->readHandlerParameter = parameter;
+}
+
+void
+CS104_Connection_ClockSynchronizationHandler_sDEV(CS104_Connection self, CS101_ClockSynchronizationHandler handler, void* parameter)
+{
+    self->clockSyncHandler = handler;
+    self->clockSyncHandlerParameter = parameter;
+}
+
+void
+CS104_Connection_ResetProcessHandler_sDEV(CS104_Connection self, CS101_ResetProcessHandler handler, void* parameter)
+{
+    self->resetProcessHandler = handler;
+    self->resetProcessHandlerParameter = parameter;
+}
+
+void
+CS104_Connection_DelayAcquisitionHandler_sDEV(CS104_Connection self, CS101_DelayAcquisitionHandler handler, void* parameter)
+{
+    self->delayAcquisitionHandler = handler;
+    self->delayAcquisitionHandlerParameter = parameter;
+}
+
+static void responseCOTUnknown(CS101_ASDU asdu, CS104_Connection self)
+{
+    DEBUG_PRINT("  with unknown COT\n");
+    CS101_ASDU_setCOT(asdu, CS101_COT_UNKNOWN_COT);
+    sendASDUInternal_sDEV(self, asdu);
+}
+
+static void
+handleASDU_sDEV(CS104_Connection self, CS101_ASDU asdu)
+{
+    bool messageHandled = false;
+    uint8_t cot = CS101_ASDU_getCOT(asdu);
+    switch (CS101_ASDU_getTypeID(asdu))
+    {
+        case C_IC_NA_1: /* 100 - interrogation command */
+
+            DEBUG_PRINT("Rcvd interrogation command C_IC_NA_1\n");
+
+            if ((cot == CS101_COT_ACTIVATION) || (cot == CS101_COT_DEACTIVATION)) {
+                if (self->interrogationHandler != NULL) {
+
+                    InterrogationCommand irc = (InterrogationCommand) CS101_ASDU_getElement(asdu, 0);
+
+                    if (self->interrogationHandler(self->interrogationHandlerParameter,
+                            &(self->iMasterConnection), asdu, InterrogationCommand_getQOI(irc)))
+                        messageHandled = true;
+
+                    InterrogationCommand_destroy(irc);
+                }
+            }
+            else
+                responseCOTUnknown(asdu, self);
+
+            break;
+
+        case C_CI_NA_1: /* 101 - counter interrogation command */
+
+            DEBUG_PRINT("Rcvd counter interrogation command C_CI_NA_1\n");
+
+            if ((cot == CS101_COT_ACTIVATION) || (cot == CS101_COT_DEACTIVATION)) {
+
+                if (self->counterInterrogationHandler != NULL) {
+
+                    CounterInterrogationCommand cic = (CounterInterrogationCommand) CS101_ASDU_getElement(asdu, 0);
+
+
+                    if (self->counterInterrogationHandler(self->counterInterrogationHandlerParameter,
+                            &(self->iMasterConnection), asdu, CounterInterrogationCommand_getQCC(cic)))
+                        messageHandled = true;
+
+                    CounterInterrogationCommand_destroy(cic);
+                }
+            }
+            else
+                responseCOTUnknown(asdu, self);
+
+            break;
+
+        case C_RD_NA_1: /* 102 - read command */
+
+            DEBUG_PRINT("Rcvd read command C_RD_NA_1\n");
+
+            if (cot == CS101_COT_REQUEST) {
+                if (self->readHandler != NULL) {
+                    ReadCommand rc = (ReadCommand) CS101_ASDU_getElement(asdu, 0);
+
+                    if (self->readHandler(self->readHandlerParameter,
+                            &(self->iMasterConnection), asdu, InformationObject_getObjectAddress((InformationObject) rc)))
+                        messageHandled = true;
+
+                    ReadCommand_destroy(rc);
+                }
+            }
+            else
+                responseCOTUnknown(asdu, self);
+
+            break;
+
+        case C_CS_NA_1: /* 103 - Clock synchronization command */
+
+            DEBUG_PRINT("Rcvd clock sync command C_CS_NA_1\n");
+
+            if (cot == CS101_COT_ACTIVATION || cot == CS101_COT_REQUEST) {//set or read time
+
+                if (self->clockSyncHandler != NULL) {
+
+                    ClockSynchronizationCommand csc = (ClockSynchronizationCommand) CS101_ASDU_getElement(asdu, 0);
+
+                    if (self->clockSyncHandler(self->clockSyncHandlerParameter,
+                            &(self->iMasterConnection), asdu, ClockSynchronizationCommand_getTime(csc)))
+                        messageHandled = true;
+
+                    ClockSynchronizationCommand_destroy(csc);
+                }
+            }
+            else
+                responseCOTUnknown(asdu, self);
+
+            break;
+
+        case C_TS_NA_1: /* 104 - test command */
+
+            DEBUG_PRINT("Rcvd test command C_TS_NA_1\n");
+
+            if (cot != CS101_COT_ACTIVATION)
+                CS101_ASDU_setCOT(asdu, CS101_COT_UNKNOWN_COT);
+            else
+                CS101_ASDU_setCOT(asdu, CS101_COT_ACTIVATION_CON);
+
+            sendASDUInternal_sDEV(self, asdu);
+
+            messageHandled = true;
+
+            break;
+
+        case C_RP_NA_1: /* 105 - Reset process command */
+
+            DEBUG_PRINT("Rcvd reset process command C_RP_NA_1\n");
+
+            if (cot == CS101_COT_ACTIVATION) {
+
+                if (self->resetProcessHandler != NULL) {
+                    ResetProcessCommand rpc = (ResetProcessCommand) CS101_ASDU_getElement(asdu, 0);
+
+                    if (self->resetProcessHandler(self->resetProcessHandlerParameter,
+                            &(self->iMasterConnection), asdu, ResetProcessCommand_getQRP(rpc)))
+                        messageHandled = true;
+
+                    ResetProcessCommand_destroy(rpc);
+                }
+
+            }
+            else
+                responseCOTUnknown(asdu, self);
+
+            break;
+
+        case C_CD_NA_1: /* 106 - Delay acquisition command */
+
+            DEBUG_PRINT("Rcvd delay acquisition command C_CD_NA_1\n");
+
+            if ((cot == CS101_COT_ACTIVATION) || (cot == CS101_COT_SPONTANEOUS)) {
+
+                if (self->delayAcquisitionHandler != NULL) {
+                    DelayAcquisitionCommand dac = (DelayAcquisitionCommand) CS101_ASDU_getElement(asdu, 0);
+
+                    if (self->delayAcquisitionHandler(self->delayAcquisitionHandlerParameter,
+                            &(self->iMasterConnection), asdu, DelayAcquisitionCommand_getDelay(dac)))
+                        messageHandled = true;
+
+                    DelayAcquisitionCommand_destroy(dac);
+                }
+            }
+            else
+                responseCOTUnknown(asdu, self);
+
+            break;
+
+        default: /* no special handler available -> use default handler */
+            break;
+    }
+
+    if ((messageHandled == false) && (self->asduHandler != NULL))
+        if (self->asduHandler(self->asduHandlerParameter, &(self->iMasterConnection), asdu))
+            messageHandled = true;
+
+    if (messageHandled == false) {
+        /* send error response */
+        CS101_ASDU_setCOT(asdu, CS101_COT_UNKNOWN_TYPE_ID);
+        sendASDUInternal_sDEV(self, asdu);
+    }
+}
+
+static bool
+handleMessage_sDEV(CS104_Connection self, uint8_t* buffer, int msgSize)
+{
+    uint64_t currentTime = Hal_getTimeInMs();
+
+    if ((buffer[2] & 1) == 0) {
+
+        if (msgSize < 7) {
+            DEBUG_PRINT("Received I msg too small!\n");
+            return false;
+        }
+
+        if (self->firstIMessageReceived == false) {
+            self->firstIMessageReceived = true;
+            self->lastConfirmationTime = currentTime; /* start timeout T2 */
+        }
+
+        int frameSendSequenceNumber = ((buffer [3] * 0x100) + (buffer [2] & 0xfe)) / 2;
+        int frameRecvSequenceNumber = ((buffer [5] * 0x100) + (buffer [4] & 0xfe)) / 2;
+
+        DEBUG_PRINT("Received I frame: N(S) = %i N(R) = %i\n", frameSendSequenceNumber, frameRecvSequenceNumber);
+
+        if (frameSendSequenceNumber != self->receiveCount) {
+            DEBUG_PRINT("Sequence error: Close connection!");
+            //return false;
+        }
+
+        if (checkSequenceNumber (self, frameRecvSequenceNumber) == false) {
+            DEBUG_PRINT("Sequence number check failed");
+            //return false;
+        }
+
+        self->receiveCount = (self->receiveCount + 1) % 32768;
+        self->unconfirmedReceivedIMessages++;
+
+        if (self->isActive) {
+
+            CS101_ASDU asdu = CS101_ASDU_createFromBuffer(&(self->alParameters), buffer + 6, msgSize - 6);
+
+            handleASDU_sDEV(self, asdu);
+
+            CS101_ASDU_destroy(asdu);
+        }
+        else
+            DEBUG_PRINT("Connection not activated. Skip I message");
+
+    }
+
+    /* Check for TESTFR_ACT message */
+    else if ((buffer[2] & 0x43) == 0x43) {
+        DEBUG_PRINT("Send TESTFR_CON\n");
+
+        writeToSocket(self, TESTFR_CON_MSG, TESTFR_CON_MSG_SIZE);
+    }
+
+    /* Check for STARTDT_ACT message */
+    else if ((buffer [2] & 0x07) == 0x07) {
+        DEBUG_PRINT("Send STARTDT_CON\n");
+        self->isActive = true;
+        self->receiveCount = 0;//clear seqnum
+        self->sendCount = 0;
+        self->unconfirmedReceivedIMessages = 0;
+
+        writeToSocket(self, STARTDT_CON_MSG, STARTDT_CON_MSG_SIZE);
+    }
+
+    /* Check for STOPDT_ACT message */
+    else if ((buffer [2] & 0x13) == 0x13) {
+        DEBUG_PRINT("Send STOPDT_CON\n");
+
+        self->isActive = false;
+
+        writeToSocket(self, STOPDT_CON_MSG, STOPDT_CON_MSG_SIZE);
+    }
+
+    /* Check for TESTFR_CON message */
+    else if ((buffer[2] & 0x83) == 0x83) {
+        DEBUG_PRINT("Recv TESTFR_CON\n");
+
+        //self->outstandingTestFRConMessages = 0;
+        self->outstandingTestFCConMessages = 0;
+    }
+
+    else if (buffer [2] == 0x01) { /* S-message */
+        int seqNo = (buffer[4] + buffer[5] * 0x100) / 2;
+
+        DEBUG_PRINT("Rcvd S(%i) (own sendcounter = %i)\n", seqNo, self->sendCount);
+
+        if (checkSequenceNumber(self, seqNo) == false)
+        {
+            DEBUG_PRINT("checkMessage return false(S-message),Sequence error: Close connection!\n");
+            return false;
+        }
+    }
+    else {
+        DEBUG_PRINT("unknown message - IGNORE\n");
+        return true;
+    }
+
+    resetT3Timeout(self);
+
+    return true;
+}
+
+static void*
+handleConnection_sDEV(void* parameter)
+{
+    CS104_Connection self = (CS104_Connection) parameter;
+
+    resetConnection(self);
+
+    self->socket = TcpSocket_create();
+
+    Socket_setConnectTimeout(self->socket, self->connectTimeoutInMs);
+
+    if (Socket_connect(self->socket, self->hostname, self->tcpPort)) {
+
+#if (CONFIG_CS104_SUPPORT_TLS == 1)
+        if (self->tlsConfig != NULL) {
+            self->tlsSocket = TLSSocket_create(self->socket, self->tlsConfig);
+
+            if (self->tlsSocket)
+                self->running = true;
+            else
+                self->failure = true;
+        }
+        else
+            self->running = true;
+#else
+        self->running = true;
+#endif
+
+        if (self->running) {
+
+            /* Call connection handler */
+            if (self->connectionHandler != NULL)
+                self->connectionHandler(self->connectionHandlerParameter, self, CS104_CONNECTION_OPENED);
+
+            HandleSet handleSet = Handleset_new();
+
+            bool loopRunning = true;
+
+            while (loopRunning) {
+
+                uint8_t buffer[300];
+
+                Handleset_reset(handleSet);
+                Handleset_addSocket(handleSet, self->socket);
+
+                if (Handleset_waitReady(handleSet, 100)) {
+                    int bytesRec = receiveMessage(self, buffer);
+
+                    if (bytesRec == -1) {
+                        loopRunning = false;
+                        self->failure = true;//perror();strerror(errno);
+                        DEBUG_PRINT("Error reading from socket,loopRunning is set false,receiveMessage bytesRec == -1,strerror(errno): %s\n",strerror(errno));//
+                    }
+
+                    if (bytesRec > 0) {
+                        DEBUG_PRINT("Connection: rcvd msg(%i bytes)\n", bytesRec);
+
+                        if (handleMessage_sDEV(self, buffer, bytesRec) == false) {
+                            /* close connection on error */
+                            loopRunning= false;
+                            self->failure = true;
+                            DEBUG_PRINT("loopRunning is set false,checkMessage(self, buffer, bytesRec) is false\n");//
+                        }
+                    }
+
+                    if (self->unconfirmedReceivedIMessages >= self->parameters.w) {
+                        self->lastConfirmationTime = Hal_getTimeInMs();
+                        self->unconfirmedReceivedIMessages = 0;
+                        sendSMessage(self);
+                    }
+                }
+
+                if (handleTimeouts(self) == false)
+                {
+                    self->running = false;
+                    loopRunning = false;
+                    DEBUG_PRINT("loopRunning is set false,handleTimeouts(self) is false\n");//
+                }
+
+                if (self->close)
+                {
+                    self->running = false;
+                    loopRunning = false;
+                    DEBUG_PRINT("loopRunning is set false,self->close is true\n");//
+                    }
+            }
+
+            Handleset_destroy(handleSet);
+
+            /* Call connection handler */
+            if (self->connectionHandler != NULL)
+            {
+                self->connectionHandler(self->connectionHandlerParameter, self, CS104_CONNECTION_CLOSED);
+            }
+
+        }
+    }
+    else {
+        self->failure = true;
+    }
+
+#if (CONFIG_CS104_SUPPORT_TLS == 1)
+    if (self->tlsSocket)
+        TLSSocket_close(self->tlsSocket);
+#endif
+
+    Socket_destroy(self->socket);
+
+    DEBUG_PRINT("EXIT CONNECTION HANDLING THREAD!!!\n");//
+    if (self->importantInfoHandler != NULL)
+        self->importantInfoHandler(self->importantInfoHandlerParameter, "EXIT CONNECTION HANDLING THREAD!");
+
+    self->running = false;
+
+    return NULL;
+}
+
+bool
+CS104_Connection_connect_sDEV(CS104_Connection self)
+{
+    resetConnection(self);
+
+    resetT3Timeout(self);
+
+    //self->connectionHandlingThread_sDEV = Thread_create(handleConnection_sDEV, (void*) self, false);
+    self->connectionHandlingThread = Thread_create(handleConnection_sDEV, (void*) self, false);
+    if (self->connectionHandlingThread)
+        Thread_start(self->connectionHandlingThread);
+
+    while ((self->running == false) && (self->failure == false))
+        Thread_sleep(1);
+
+    return self->running;
+}
+
+
+//===============  104 connection : as client and as slave device(simulation equipment) ==============//
