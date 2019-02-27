@@ -1298,7 +1298,8 @@ handleConnection_mStation(void* parameter)//
     self->running = false;
 
     self->server_mStation->connectionBrokenHandler_mStation(self->server_mStation->connectionBrokenHandlerParameter_mStation,(char*)(self->hostname),self->tcpPort);
-    CS104_Connection_removeConnection(self->server_mStation, self);
+    //CS104_Connection_removeConnection(self->server_mStation, self);
+    CS104_Connection_removeConnection_mStation(self->server_mStation, self);
 
     return NULL;
 }
