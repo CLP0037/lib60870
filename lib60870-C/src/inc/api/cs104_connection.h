@@ -65,6 +65,7 @@ typedef struct sCS104_Connection_mStation* CS104_Connection_mStation;
  */
 typedef bool (*CS104_ConnectionRequestHandler_mStation) (void* parameter, const char* ipAddress, int port);
 
+typedef bool (*CS104_ConnectionBrokenHandler_mStation) (void* parameter, const char* ipAddress, int port);
 /**
  * \brief Create a new connection object
  *
@@ -397,6 +398,9 @@ CS104_Connection_getOpenConnections(CS104_Connection_mStation self);
 void
 CS104_Connection_setConnectionRequestHandler(CS104_Connection_mStation self, CS104_ConnectionRequestHandler_mStation handler, void* parameter);
 
+void
+CS104_Connection_setConnectionBrokenHandler(CS104_Connection_mStation self, CS104_ConnectionBrokenHandler_mStation handler, void* parameter);
+
 //void
 //CS104_Connection_setASDUReceivedHandler_mStation0(CS104_Connection self, CS101_ASDUReceivedHandler handler, void* parameter);
 
@@ -460,6 +464,8 @@ CS104_Connection_sendTestCommand_mStation(CS104_Connection_mStation self,char* i
 int //对时
 CS104_Connection_sendClockSyncCommand_SetandRead_mStation(CS104_Connection_mStation self,char* ip,int port, int ca, int cot,unsigned char* time);
 
+void //移除连接
+CS104_Connection_removeConnection_mStation(CS104_Connection_mStation self, CS104_Connection connection);
 //===============  104 connection : as server and as master station ==============//
 
 

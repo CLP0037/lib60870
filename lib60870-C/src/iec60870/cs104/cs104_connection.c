@@ -56,6 +56,15 @@ struct sCS104_APCIParameters defaultAPCIParameters = {
         /* .t3 = */ 10
 };//old default value: w=8; t3=20
 
+struct sCS104_APCIParameters defaultAPCIParameters_sDEV = {
+        /* .k = */ 12,
+        /* .w = */ 8,
+        /* .t0 = */ 30,
+        /* .t1 = */ 15,
+        /* .t2 = */ 10,
+        /* .t3 = */ 20
+};
+
 static struct sCS101_AppLayerParameters defaultAppLayerParameters = {
     /* .sizeOfTypeId =  */ 1,
     /* .sizeOfVSQ = */ 1,
@@ -199,6 +208,8 @@ struct sCS104_Connection_mStation {
     CS104_ConnectionRequestHandler_mStation connectionRequestHandler_mStation;
     void* connectionRequestHandlerParameter_mStation;
 
+    CS104_ConnectionBrokenHandler_mStation connectionBrokenHandler_mStation;
+    void* connectionBrokenHandlerParameter_mStation;
 
 #if (CONFIG_CS104_SUPPORT_TLS == 1)
     TLSConfiguration tlsConfig;
@@ -1286,6 +1297,9 @@ handleConnection_mStation(void* parameter)//
 
     self->running = false;
 
+    self->server_mStation->connectionBrokenHandler_mStation(self->server_mStation->connectionBrokenHandlerParameter_mStation,(char*)(self->hostname),self->tcpPort);
+    CS104_Connection_removeConnection(self->server_mStation, self);
+
     return NULL;
 }
 
@@ -1766,7 +1780,9 @@ sCS104_Connection_mStation_create(int maxLowPrioQueueSize, int maxHighPrioQueueS
     if(self != NULL)
     {
         self->connectionRequestHandler_mStation = NULL;
-
+        self->connectionRequestHandlerParameter_mStation = NULL;
+        self->connectionBrokenHandler_mStation = NULL;
+        self->connectionBrokenHandlerParameter_mStation = NULL;
 #if (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1)
         self->maxLowPrioQueueSize = maxLowPrioQueueSize;
         self->maxHighPrioQueueSize = maxHighPrioQueueSize;
@@ -1840,6 +1856,13 @@ CS104_Connection_setConnectionRequestHandler(CS104_Connection_mStation self, CS1
     printf("CS104_Connection_setConnectionRequestHandler\n");
     self->connectionRequestHandler_mStation = handler;
     self->connectionRequestHandlerParameter_mStation = parameter;
+}
+
+void
+CS104_Connection_setConnectionBrokenHandler(CS104_Connection_mStation self, CS104_ConnectionBrokenHandler_mStation handler, void* parameter)
+{
+    self->connectionBrokenHandler_mStation = handler;
+    self->connectionBrokenHandlerParameter_mStation = parameter;
 }
 
 //void
@@ -2436,7 +2459,6 @@ CS104_Connection_sendClockSyncCommand_SetandRead_mStation(CS104_Connection_mStat
 
 
 
-
 static void
 CS104_Connection_removeConnection(CS104_Connection_mStation self, CS104_Connection connection)
 {
@@ -2454,6 +2476,12 @@ CS104_Connection_removeConnection(CS104_Connection_mStation self, CS104_Connecti
 #endif
 
 
+}
+
+void
+CS104_Connection_removeConnection_mStation(CS104_Connection_mStation self, CS104_Connection connection)
+{
+    CS104_Connection_removeConnection(self, connection);
 }
 
 //static void
@@ -2633,7 +2661,7 @@ CS104_Connection_create_sDEV(const char* hostname, int tcpPort)
     if (self != NULL) {
         strncpy(self->hostname, hostname, HOST_NAME_MAX);
         self->tcpPort = tcpPort;
-        self->parameters = defaultAPCIParameters;
+        self->parameters = defaultAPCIParameters_sDEV;//defaultAPCIParameters
         self->alParameters = defaultAppLayerParameters;
 
         self->receivedHandler = NULL;
@@ -2930,6 +2958,12 @@ handleASDU_sDEV(CS104_Connection self, CS101_ASDU asdu)
 static bool
 handleMessage_sDEV(CS104_Connection self, uint8_t* buffer, int msgSize)
 {
+    if (msgSize > 0) {
+        if (self->msgreceivedHandler != NULL)
+            self->msgreceivedHandler(self->msgreceivedHandlerParameter, buffer, msgSize);
+
+    }
+
     uint64_t currentTime = Hal_getTimeInMs();
 
     if ((buffer[2] & 1) == 0) {
@@ -3031,6 +3065,77 @@ handleMessage_sDEV(CS104_Connection self, uint8_t* buffer, int msgSize)
     return true;
 }
 
+static bool
+handleTimeouts_sDEV(CS104_Connection self)
+{
+    bool retVal = true;
+
+    uint64_t currentTime = Hal_getTimeInMs();
+
+    if (currentTime > self->nextT3Timeout) {
+
+        if (self->outstandingTestFCConMessages > 2) {//测试帧重发两次未回复，断开链路
+            //DEBUG_PRINT("Timeout for TESTFR_CON message");//\n
+
+            /* close connection */
+            retVal = false;
+            if (self->importantInfoHandler != NULL)
+                self->importantInfoHandler(self->importantInfoHandlerParameter, "(handleTimeouts)Timeout for TESTFR_CON message: Close connection!");
+            goto exit_function;
+        }
+        else {
+            //\n 长期空闲状态下发送测试帧的超时(设备端主动发出)
+            writeToSocket(self, TESTFR_ACT_MSG, TESTFR_ACT_MSG_SIZE);
+
+            self->uMessageTimeout = currentTime + (self->parameters.t1 * 1000);
+            self->outstandingTestFCConMessages++;
+
+            resetT3Timeout(self);
+        }
+    }
+
+    //t2  10s  无数据报文时确认的超时，t2<t1  ==========
+//    if (self->unconfirmedReceivedIMessages > 0) {
+
+//        if (checkConfirmTimeout(self, currentTime)) {
+
+//            self->lastConfirmationTime = currentTime;
+//            self->unconfirmedReceivedIMessages = 0;
+
+//            sendSMessage(self); /* send confirmation message */
+//        }
+//    }
+
+
+    if (self->uMessageTimeout != 0) {
+        if (currentTime > self->uMessageTimeout) {
+            DEBUG_PRINT("U message T1 timeout\n");//
+            //retVal = false;
+            //goto exit_function;
+        }
+    }
+
+    /* check if counterpart confirmed I messages */
+    //t1  15s  发送或测试 APDU 的超时  ==========
+#if (CONFIG_USE_THREADS == 1)
+    Semaphore_wait(self->sentASDUsLock);
+#endif
+    if (self->oldestSentASDU != -1) {
+        if ((currentTime - self->sentASDUs[self->oldestSentASDU].sentTime) >= (uint64_t) (self->parameters.t1 * 1000)) {
+            //DEBUG_PRINT("I message timeout,self->parameters.t1 = %d (currentTime - self->sentASDUs[%d].sentTime = %d)\n",self->parameters.t1,self->oldestSentASDU,(currentTime - self->sentASDUs[self->oldestSentASDU].sentTime));//\n
+            //retVal = false;
+        }
+    }
+#if (CONFIG_USE_THREADS == 1)
+    Semaphore_post(self->sentASDUsLock);
+#endif
+
+
+exit_function:
+
+    return retVal;
+}
+
 static void*
 handleConnection_sDEV(void* parameter)
 {
@@ -3103,7 +3208,7 @@ handleConnection_sDEV(void* parameter)
                     }
                 }
 
-                if (handleTimeouts(self) == false)
+                if (handleTimeouts_sDEV(self) == false)
                 {
                     self->running = false;
                     loopRunning = false;
