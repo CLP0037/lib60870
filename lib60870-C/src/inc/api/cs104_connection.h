@@ -360,13 +360,17 @@ CS104_Connection_setConnectionHandler(CS104_Connection self, CS104_ConnectionHan
 void
 CS104_Connection_close(CS104_Connection self);
 
+void
+CS104_Connection_close_mStation(CS104_Connection self);
+
 /**
  * \brief Close the connection and free all related resources
  */
 void
 CS104_Connection_destroy(CS104_Connection self);
 
-
+void
+CS104_Connection_destroy_mStation_one(CS104_Connection self);
 
 //===============  104 connection : as server and as master station ==============//
 

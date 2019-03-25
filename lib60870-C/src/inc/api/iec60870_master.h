@@ -68,12 +68,13 @@ typedef struct
     unsigned char 		EC;   //element count
     unsigned char 		FT;   //frame type帧类型：1-I帧 2-U帧 3-S帧
 }_FRAMESTRUCT104;//规约结构
-//CS104_MSGReceivedHandler
+//CS104_MSGReceivedHandler   //,unsigned long long timestamp     //,Hal_getTimeInMs()
 typedef bool (*CS104_MSGReceivedHandler_withExplain) (void* parameter, uint8_t* buffer, int msgSize,char* msg_explain,_FRAMESTRUCT104 sframe, CS101_ASDU asdu);
+//typedef bool (*CS104_MSGReceivedHandler_withExplain) (void* parameter, uint8_t* buffer, int msgSize,char* msg_explain,_FRAMESTRUCT104 sframe, CS101_ASDU asdu,unsigned long long timestamp);
 
-//CS104_MSGSendHandler
-typedef bool (*CS104_MSGSendHandler_withExplain) (void* parameter, uint8_t* buffer, int msgSize,char* msg_explain,_FRAMESTRUCT104 sframe, CS101_ASDU asdu);//,_FRAMESTRUCT104 sframe
-
+//CS104_MSGSendHandler   //,unsigned long long timestamp
+typedef bool (*CS104_MSGSendHandler_withExplain) (void* parameter, uint8_t* buffer, int msgSize,char* msg_explain,_FRAMESTRUCT104 sframe, CS101_ASDU asdu);
+//typedef bool (*CS104_MSGSendHandler_withExplain) (void* parameter, uint8_t* buffer, int msgSize,char* msg_explain,_FRAMESTRUCT104 sframe, CS101_ASDU asdu,unsigned long long timestamp);
 
 
 typedef void (*CS104_ImportantInfoHandler)(void* parameter, char* msg);

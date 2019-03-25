@@ -323,7 +323,7 @@ sendSMessage(CS104_Connection self)
 
     writeToSocket(self, msg, 6);
 
-    if(self->msgsendHandler_withExplain != NULL)
+    if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()
     {
         //按规约类型分别赋值解析描述
         self->cs104_frame.TI = 0;
@@ -333,7 +333,7 @@ sendSMessage(CS104_Connection self)
         self->cs104_frame.NS = self->sendCount;
         self->cs104_frame.FT = 3;//frame type帧类型：1-I帧 2-U帧 3-S帧
 
-        self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, msg, 6,"S_frame_explain",self->cs104_frame,NULL);//
+        self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, msg, 6,"S_frame_explain",self->cs104_frame,NULL);//,Hal_getTimeInMs()
     }
 }
 
@@ -343,8 +343,12 @@ sendIMessage(CS104_Connection self, Frame frame)
     T104Frame_prepareToSend((T104Frame) frame, self->sendCount, self->receiveCount);
 
     writeToSocket(self, T104Frame_getBuffer(frame), T104Frame_getMsgSize(frame));
-
-    if(self->msgsendHandler_withExplain != NULL)
+//    unsigned long long timestamp = Hal_getTimeInMs();
+//    //DEBUG_PRINT("sendIMessage: time %ld\n", timestamp);//Hal_getTimeInMs()
+//#ifdef WIN32
+//        qDebug()<<"sendIMessage: "<<timestamp;
+//#endif
+    if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()   ,timestamp
     {
         CS101_ASDU asdu = CS101_ASDU_createFromBuffer((CS101_AppLayerParameters)&(self->alParameters), T104Frame_getBuffer(frame) + 6, T104Frame_getMsgSize(frame) - 6);
         //按规约类型分别赋值解析描述
@@ -359,7 +363,13 @@ sendIMessage(CS104_Connection self, Frame frame)
             self->cs104_frame.NS = self->sendCount;
             self->cs104_frame.FT = 1;//frame type帧类型：1-I帧 2-U帧 3-S帧
 
-            self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, T104Frame_getBuffer(frame), T104Frame_getMsgSize(frame),"S_frame_explain",self->cs104_frame,asdu);//
+//#ifdef WIN32
+//        qDebug()<<"sendIMessage(before msgsendHandler): "<<Hal_getTimeInMs();//timestamp
+//#endif
+            self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, T104Frame_getBuffer(frame), T104Frame_getMsgSize(frame),"S_frame_explain",self->cs104_frame,asdu);//Hal_getTimeInMs()
+//#ifdef WIN32
+//        qDebug()<<"sendIMessage(after msgsendHandler): "<<Hal_getTimeInMs();//timestamp
+//#endif
             CS101_ASDU_destroy(asdu);
         }
 
@@ -657,9 +667,30 @@ CS104_Connection_close(CS104_Connection self)
 }
 
 void
+CS104_Connection_close_mStation(CS104_Connection self)
+{
+    self->running = false;//self->close = true;
+}
+
+void
 CS104_Connection_destroy(CS104_Connection self)
 {
     CS104_Connection_close(self);
+
+    if (self->sentASDUs != NULL)
+        GLOBAL_FREEMEM(self->sentASDUs);
+
+#if (CONFIG_USE_THREADS == 1)
+    Semaphore_destroy(self->sentASDUsLock);
+#endif
+
+    GLOBAL_FREEMEM(self);
+}
+
+void
+CS104_Connection_destroy_mStation_one(CS104_Connection self)
+{
+    CS104_Connection_close_mStation(self);
 
     if (self->sentASDUs != NULL)
         GLOBAL_FREEMEM(self->sentASDUs);
@@ -800,6 +831,11 @@ checkConfirmTimeout(CS104_Connection self, uint64_t currentTime)//long
 static bool
 checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
 {
+    unsigned long long timestamp = Hal_getTimeInMs();
+    //DEBUG_PRINT("checkMessage: time %ld\n", timestamp);//
+//#ifdef WIN32
+//        qDebug()<<"checkMessage: "<<timestamp;
+//#endif
 
     if (msgSize > 0) {
         if (self->msgreceivedHandler != NULL)
@@ -808,6 +844,9 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
     }
 
     if ((buffer[2] & 1) == 0) { /* I format frame */
+#ifdef WIN32
+        qDebug()<<"ReceivedIMessage: "<<Hal_getTimeInMs();
+#endif
 
         if (self->firstIMessageReceived == false) {
             self->firstIMessageReceived = true;
@@ -850,9 +889,8 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
         CS101_ASDU asdu = CS101_ASDU_createFromBuffer((CS101_AppLayerParameters)&(self->alParameters), buffer + 6, msgSize - 6);
 
         if (asdu != NULL) {
-            if (self->receivedHandler != NULL)
-                self->receivedHandler(self->receivedHandlerParameter, -1, asdu);
-
+//            if (self->receivedHandler != NULL)
+//                self->receivedHandler(self->receivedHandlerParameter, -1, asdu);
 
             self->cs104_frame.TI = CS101_ASDU_getTypeID(asdu);
             self->cs104_frame.COT = CS101_ASDU_getCOT(asdu);
@@ -862,8 +900,19 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
             self->cs104_frame.NR = frameRecvSequenceNumber;
             self->cs104_frame.NS = frameSendSequenceNumber;
             self->cs104_frame.FT = 1;//frame type帧类型：1-I帧 2-U帧 3-S帧
-            if (self->msgreceivedHandler_withExplain != NULL)
-                self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"I_frame_explain",self->cs104_frame,asdu);
+
+//#ifdef WIN32
+//        qDebug()<<"ReceivedIMessage(before msgreceivedHandler): "<<Hal_getTimeInMs();
+//#endif
+            if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()  获取当前时间时间戳   ,timestamp
+                self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"I_frame_explain",self->cs104_frame,asdu);// Hal_getTimeInMs()
+//            DEBUG_PRINT("checkMessage(Received I frame): time %ld\n", timestamp);//
+//#ifdef WIN32
+//        qDebug()<<"ReceivedIMessage(after msgreceivedHandler): "<<Hal_getTimeInMs();
+//#endif
+
+        if (self->receivedHandler != NULL)
+            self->receivedHandler(self->receivedHandlerParameter, -1, asdu);
 
             CS101_ASDU_destroy(asdu);
         }
@@ -890,21 +939,21 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
 
         if (buffer[2] == 0x43) { /* Check for TESTFR_ACT message */
 //            DEBUG_PRINT("Send TESTFR_CON");//\n
-            if (self->msgreceivedHandler_withExplain != NULL)
+            if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()  ,Hal_getTimeInMs()
                 self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Send TESTFR_CON",self->cs104_frame,NULL);
 //            //qDebug()<<"DEBUG_LIB60870:"<<"(for printtest)Send TESTFR_CON\n";
 //            if (self->importantInfoHandler != NULL)
 //                self->importantInfoHandler(self->importantInfoHandlerParameter, "Send TESTFR_CON!");//
             writeToSocket(self, TESTFR_CON_MSG, TESTFR_CON_MSG_SIZE);
 
-            if(self->msgsendHandler_withExplain != NULL)
+            if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()   ,Hal_getTimeInMs()
             {
                 self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, buffer, 6,"Send TESTFR_CON",self->cs104_frame,NULL);//
             }
         }
         else if (buffer[2] == 0x83) { /* TESTFR_CON */
 //            DEBUG_PRINT("Rcvd TESTFR_CON");//\n
-            if (self->msgreceivedHandler_withExplain != NULL)
+            if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()    ,Hal_getTimeInMs()
                 self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Rcvd TESTFR_CON",self->cs104_frame,NULL);
             //qDebug()<<"DEBUG_LIB60870:"<<"(for printtest)Rcvd TESTFR_CON\n";
 
@@ -912,21 +961,21 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
         }
         else if (buffer[2] == 0x07) { /* STARTDT_ACT */
             //DEBUG_PRINT("Send STARTDT_CON");//\n
-            if (self->msgreceivedHandler_withExplain != NULL)
+            if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()    ,Hal_getTimeInMs()
                 self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Send STARTDT_CON",self->cs104_frame,NULL);
             self->receiveCount = 0;//clear seqnum
             self->sendCount = 0;
             self->unconfirmedReceivedIMessages = 0;
             writeToSocket(self, STARTDT_CON_MSG, STARTDT_CON_MSG_SIZE);
 
-            if(self->msgsendHandler_withExplain != NULL)
+            if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()  ,Hal_getTimeInMs()
             {
                 self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, buffer, 6,"Send STARTDT_CON",self->cs104_frame,NULL);//
             }
         }
         else if (buffer[2] == 0x0b) { /* STARTDT_CON */
             //DEBUG_PRINT("Received STARTDT_CON");//\n
-            if (self->msgreceivedHandler_withExplain != NULL)
+            if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()   ,Hal_getTimeInMs()
                 self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Rcvd STARTDT_CON",self->cs104_frame,NULL);
             self->receiveCount = 0;//clear seqnum
             self->sendCount = 0;
@@ -938,7 +987,7 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
         }
         else if (buffer[2] == 0x23) { /* STOPDT_CON */
             //DEBUG_PRINT("Received STOPDT_CON");//\n
-            if (self->msgreceivedHandler_withExplain != NULL)
+            if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()    ,Hal_getTimeInMs()
                 self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Rcvd STOPDT_CON",self->cs104_frame,NULL);
 
             if (self->connectionHandler != NULL)
@@ -954,7 +1003,7 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
         self->cs104_frame.NR = seqNo;
         self->cs104_frame.NS = self->sendCount;
         self->cs104_frame.FT = 3;//frame type帧类型：1-I帧 2-U帧 3-S帧
-        if (self->msgreceivedHandler_withExplain != NULL)
+        if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()    ,Hal_getTimeInMs()
             self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"S_frame_explain",self->cs104_frame,NULL);
 
         //DEBUG_PRINT("Rcvd S(%i) (own sendcounter = %i)\n", seqNo, self->sendCount);
@@ -997,7 +1046,7 @@ handleTimeouts(CS104_Connection self)
             //DEBUG_PRINT("U message T3 timeout");//\n 长期空闲状态下发送测试帧的超时
 
             writeToSocket(self, TESTFR_ACT_MSG, TESTFR_ACT_MSG_SIZE);
-            if(self->msgsendHandler_withExplain != NULL)
+            if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()  ,Hal_getTimeInMs()
             {
                 self->cs104_frame.TI = 0;
                 self->cs104_frame.COT = 0;
@@ -1189,14 +1238,14 @@ handleConnection_mStation(void* parameter)//
     //DEBUG_PRINT("handleConnection_mStation,after resetConnection(self) and resetT3Timeout(self)\n");//for debug
     uint8_t buffer[260];
 
-    self->running = true;//self->isRunning = true;
+    self->running = true;//
 
     HandleSet handleSet = Handleset_new();
 
     bool isAsduWaiting = false;
-    bool loopRunning = true;
+    //bool loopRunning = true;
 
-    while (loopRunning) {//self->isRunning
+    while (self->running) {//loopRunning
         //DEBUG_PRINT("in  while (loopRunning)\n");//for debug
         Handleset_reset(handleSet);//DEBUG_PRINT("after Handleset_reset\n");//for debug
         Handleset_addSocket(handleSet, self->socket);//DEBUG_PRINT("after Handleset_addSocket\n");//for debug
@@ -1219,7 +1268,7 @@ handleConnection_mStation(void* parameter)//
 
             if (bytesRec == -1) {
                 DEBUG_PRINT("Error reading from socket, strerror(errno) is %s\n", strerror(errno));
-                loopRunning = false;
+                self->running = false;// loopRunning = false;
                 self->failure = true;
                 break;
             }
@@ -1231,13 +1280,13 @@ handleConnection_mStation(void* parameter)//
                     self->msgreceivedHandler_mStation(self->msgreceivedHandlerParameter_mStation, buffer, bytesRec,self->hostname,self->tcpPort);
                 if (checkMessage(self, buffer, bytesRec) == false) {
                     /* close connection on error */
-                    loopRunning= false;
+                    self->running = false;//loopRunning= false;
                     DEBUG_PRINT("loopRunning is set false,checkMessage(self, buffer, bytesRec) is false");//\n
                     self->failure = true;
                 }
 
 //                if (handleMessage(self, buffer, bytesRec) == false)
-//                    self->isRunning = false;
+//                    self->running = false;
 
 //                if (self->unconfirmedReceivedIMessages >= self->slave->conParameters.w) {
 
@@ -1252,17 +1301,17 @@ handleConnection_mStation(void* parameter)//
 
         if (handleTimeouts(self) == false)
         {
-            loopRunning = false;
+            self->running = false;//loopRunning = false;
             DEBUG_PRINT("loopRunning is set false,handleTimeouts(self) is false\n");//
         }
 
         if (self->close)
         {
-            loopRunning = false;
+            self->running = false;//loopRunning = false;
             DEBUG_PRINT("loopRunning is set false,self->close is true\n");//
         }
 
-//        if (self->running)//self->isRunning
+//        if (self->running)//
 //            if (self->isActive)
 //                isAsduWaiting = sendWaitingASDUs(self);
     }
@@ -1271,7 +1320,7 @@ handleConnection_mStation(void* parameter)//
 
     Handleset_destroy(handleSet);
 
-//    self->isRunning = false;
+//    self->running = false;
 
 //#if (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1)
 //    if (self->slave->serverMode == CS104_MODE_CONNECTION_IS_REDUNDANCY_GROUP) {
@@ -1435,7 +1484,7 @@ void
 CS104_Connection_sendStartDT(CS104_Connection self)
 {
     writeToSocket(self, STARTDT_ACT_MSG, STARTDT_ACT_MSG_SIZE);
-    if(self->msgsendHandler_withExplain != NULL)
+    if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()   ,Hal_getTimeInMs()
     {
         self->cs104_frame.TI = 0;
         self->cs104_frame.COT = 0;
@@ -1451,7 +1500,7 @@ void
 CS104_Connection_sendStopDT(CS104_Connection self)
 {
     writeToSocket(self, STOPDT_ACT_MSG, STOPDT_ACT_MSG_SIZE);
-    if(self->msgsendHandler_withExplain != NULL)
+    if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()   ,Hal_getTimeInMs()
     {
         self->cs104_frame.TI = 0;
         self->cs104_frame.COT = 0;
@@ -2159,12 +2208,15 @@ CS104_Connection_isRunning_mStation(CS104_Connection_mStation self)
 void
 CS104_Connection_stop_mStation(CS104_Connection_mStation self)
 {
+    //qDebug()<<"before stopRunning";
     if (self->isRunning) {
         self->stopRunning = true;
 
         while (self->isRunning)
             Thread_sleep(1);
     }
+
+    //qDebug()<<"after stopRunning";
 
     if (self->listeningThread) {
         Thread_destroy(self->listeningThread);
@@ -2184,15 +2236,15 @@ CS104_Connection_destroy_mStation(CS104_Connection_mStation self)
 //        MessageQueue_releaseAllQueuedASDUs(self->asduQueue);
 //#endif
 
-    if (self->localAddress != NULL)
-        GLOBAL_FREEMEM(self->localAddress);
+ //   if (self->localAddress != NULL)
+ //       GLOBAL_FREEMEM(self->localAddress);
 
     /*
      * Stop all connections
      * */
-#if (CONFIG_USE_THREADS == 1)
-    Semaphore_wait(self->openConnectionsLock);
-#endif
+//#if (CONFIG_USE_THREADS == 1)
+//    Semaphore_wait(self->openConnectionsLock);
+//#endif
 
 //    if(self->openConnections > 0 && self->openConnections <= 1024)
 //    {
@@ -2211,12 +2263,14 @@ CS104_Connection_destroy_mStation(CS104_Connection_mStation self)
     {
         CS104_Connection connection = (CS104_Connection) LinkedList_getData(element);
 
-        CS104_Connection_close(connection);
+        //CS104_Connection_close(connection);
+        CS104_Connection_close_mStation(connection);
     }
 
-#if (CONFIG_USE_THREADS == 1)
-    Semaphore_post(self->openConnectionsLock);
-#endif
+
+//#if (CONFIG_USE_THREADS == 1)
+//    Semaphore_post(self->openConnectionsLock);
+//#endif
 
     /* Wait until all connections are closed */
     while (CS104_Connection_getOpenConnections(self) > 0)
@@ -2224,9 +2278,9 @@ CS104_Connection_destroy_mStation(CS104_Connection_mStation self)
 
     LinkedList_destroyStatic(self->masterConnections_mStation);
 
-#if (CONFIG_USE_THREADS == 1)
-    Semaphore_destroy(self->openConnectionsLock);
-#endif
+//#if (CONFIG_USE_THREADS == 1)
+//    Semaphore_destroy(self->openConnectionsLock);
+//#endif
 
 #if (CONFIG_SLAVE_WITH_STATIC_MESSAGE_QUEUE == 0)
 
@@ -2236,7 +2290,7 @@ CS104_Connection_destroy_mStation(CS104_Connection_mStation self)
 //        HighPriorityASDUQueue_destroy(self->connectionAsduQueue);
 //    }
 //#endif /* (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1) */
-    GLOBAL_FREEMEM(self);
+  //  GLOBAL_FREEMEM(self);
 
 #endif /* (CONFIG_SLAVE_WITH_STATIC_MESSAGE_QUEUE == 0) */
 }
@@ -2458,19 +2512,45 @@ CS104_Connection_sendClockSyncCommand_SetandRead_mStation(CS104_Connection_mStat
 
 
 
+static void
+CS104_Connection_destroy_mStation_con(CS104_Connection self)
+{
+    if(self)
+    {
+        if(self->socket)
+        {
+            Socket_destroy(self->socket);
+        }
+        CS104_Connection_close(self);
 
+        if (self->sentASDUs != NULL)
+            GLOBAL_FREEMEM(self->sentASDUs);
+
+    #if (CONFIG_USE_THREADS == 1)
+        Semaphore_destroy(self->sentASDUsLock);
+    #endif
+
+        GLOBAL_FREEMEM(self);
+    }
+
+}
 
 static void
 CS104_Connection_removeConnection(CS104_Connection_mStation self, CS104_Connection connection)
 {
+    if(!(self||connection))
+        return;
 #if (CONFIG_USE_THREADS)
     Semaphore_wait(self->openConnectionsLock);
 #endif
 
-    self->openConnections--;
-    LinkedList_remove(self->masterConnections_mStation, (void*) connection);
+    //CS104_Connection_destroy_mStation_one(connection);
+    //CS104_Connection_destroy_mStation_con(connection);
+    CS104_Connection_close_mStation(connection);
 
-    CS104_Connection_destroy(connection);
+    if(self->masterConnections_mStation)
+        LinkedList_remove(self->masterConnections_mStation, (void*) connection);
+    self->openConnections--;
 
 #if (CONFIG_USE_THREADS)
     Semaphore_post(self->openConnectionsLock);
@@ -2482,7 +2562,12 @@ CS104_Connection_removeConnection(CS104_Connection_mStation self, CS104_Connecti
 void
 CS104_Connection_removeConnection_mStation(CS104_Connection_mStation self, CS104_Connection connection)
 {
-    CS104_Connection_removeConnection(self, connection);
+    if(self != NULL && connection != NULL)
+    {
+        CS104_Connection_removeConnection(self, connection);
+        //connection = NULL ;
+    }
+
 }
 
 //static void
