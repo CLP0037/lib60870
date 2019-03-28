@@ -34,7 +34,10 @@ set(QTD "$ENV{QTDIR}")
 MESSAGE( STATUS "QTDIR:         " ${QTD} )
 
 IF (WIN32)      #qDebug in windows, not in Linux as gcc does not work with C including c++ header
-set(CMAKE_PREFIX_PATH $ENV{QTDIR}/5.2.1/msvc2010/lib/cmake/Qt5Core)
+#5.2.1  QTDIR：D:\Qt\Qt5.2.1
+#set(CMAKE_PREFIX_PATH $ENV{QTDIR}/5.2.1/msvc2010/lib/cmake/Qt5Core)
+#5.9.7  QTDIR：C:\Qt\Qt5.9.7\5.9.7\msvc2017_64
+set(CMAKE_PREFIX_PATH $ENV{QTDIR}/lib/cmake/Qt5Core)
 include_directories(
     ${CMAKE_CURRENT_LIST_DIR}/src/inc/vs  #stdbool.h
     ${QTD}/include/QtCore
