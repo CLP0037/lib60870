@@ -916,6 +916,14 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
 
     }
 
+    if(buffer[0] == 0x69)//0x69=====private
+    {
+        //传给dtu调用私有规约解包
+        if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()  ,Hal_getTimeInMs()
+            self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Recieve Private protocal",self->cs104_frame,NULL);
+    }
+    else  //0x68=====104
+    {
     if ((buffer[2] & 1) == 0) { /* I format frame */
 //#ifdef WIN32
 //        qDebug()<<"ReceivedIMessage: "<<Hal_getTimeInMs();
@@ -1101,7 +1109,7 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
             return false;
         }
     }
-
+    }
 
     resetT3Timeout(self);
 
@@ -1354,7 +1362,7 @@ handleConnection_comm(void* parameter)
 
         if (read != -1) {
 
-            if (read == 0x68) {
+            if (read == 0x68||read == 0x69) {//帧头：兼容私有规约和标准104规约
 
                 SerialPort_setTimeout(self->commPort, self->characterTimeout);
 
@@ -1363,20 +1371,40 @@ handleConnection_comm(void* parameter)
                 if (msgSize == -1)
                     goto sync_error;
 
-                buffer[0] = (uint8_t) 0x68;
+                //buffer[0] = (uint8_t) 0x68;
+                buffer[0] = (uint8_t) (read);
                 buffer[1] = (uint8_t) msgSize;
 
-                int readBytes = readBytesWithTimeout(self, buffer, 2, msgSize);
+                int readBytes;
+                if(read == 0x69)
+                {
+                    readBytes= readBytesWithTimeout(self, buffer, 2, msgSize+4);
+                    if (readBytes == (msgSize+4)) {//读取到完整帧，调用解帧函数
+                        if (checkMessage(self, buffer, msgSize+6) == false) {
 
-                if (readBytes == msgSize) {//读取到完整帧，调用解帧函数
-                    if (checkMessage(self, buffer, msgSize+2) == false) {
+                        }
 
                     }
+                    else {
+                        DEBUG_PRINT("RECV[69]: Timeout reading variable length frame size = %i (expected = %i)\n", readBytes, msgSize);
+                    }
+                }
+                else //if(read == 0x68)
+                {
+                    readBytes= readBytesWithTimeout(self, buffer, 2, msgSize);
+                    if (readBytes == msgSize) {//读取到完整帧，调用解帧函数
+                        if (checkMessage(self, buffer, msgSize+2) == false) {
 
+                        }
+
+                    }
+                    else {
+                        DEBUG_PRINT("RECV[68]: Timeout reading variable length frame size = %i (expected = %i)\n", readBytes, msgSize);
+                    }
                 }
-                else {
-                    DEBUG_PRINT("RECV: Timeout reading variable length frame size = %i (expected = %i)\n", readBytes, msgSize);
-                }
+
+
+
 
             }
 
@@ -2011,6 +2039,11 @@ bool CS104_Connection_sendSelfdefinedFrame(CS104_Connection self,unsigned char* 
     }
     else
         rtn = writeToSocket(self, (uint8_t*)buf, len);
+
+    if(self->msgsendHandler_withExplain != NULL)//私有规约包发送
+    {
+        self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, buf, len,"Send Private Protocal",self->cs104_frame,NULL);//
+    }
 
     if(rtn < len)
     {
