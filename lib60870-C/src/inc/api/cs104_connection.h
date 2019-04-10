@@ -30,6 +30,8 @@
 #include "frame.h"
 #include "buffer_frame.h"
 
+#include "hal_serial.h"  // for serialport
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -66,6 +68,7 @@ typedef struct sCS104_Connection_mStation* CS104_Connection_mStation;
 typedef bool (*CS104_ConnectionRequestHandler_mStation) (void* parameter, const char* ipAddress, int port);
 
 typedef bool (*CS104_ConnectionBrokenHandler_mStation) (void* parameter, const char* ipAddress, int port);
+
 /**
  * \brief Create a new connection object
  *
@@ -76,6 +79,12 @@ typedef bool (*CS104_ConnectionBrokenHandler_mStation) (void* parameter, const c
  */
 CS104_Connection
 CS104_Connection_create(const char* hostname, int tcpPort);
+
+//SerialPort commPort
+bool CS104_Connection_getCommState(CS104_Connection self);
+
+CS104_Connection
+CS104_Connection_create_comm(SerialPort serialPort);
 
 CS104_Connection
 CS104_Connection_create_mStation(CS104_Connection_mStation slave, Socket socket);
@@ -165,6 +174,9 @@ CS104_Connection_connectAsync(CS104_Connection self);
  */
 bool
 CS104_Connection_connect(CS104_Connection self);
+
+bool
+CS104_Connection_connect_comm(CS104_Connection self);
 
 bool
 CS104_Connection_connect_mStation(CS104_Connection self);
@@ -368,6 +380,9 @@ CS104_Connection_close_mStation(CS104_Connection self);
  */
 void
 CS104_Connection_destroy(CS104_Connection self);
+
+void
+CS104_Connection_destroy_comm(CS104_Connection self);
 
 void
 CS104_Connection_destroy_mStation_one(CS104_Connection self);

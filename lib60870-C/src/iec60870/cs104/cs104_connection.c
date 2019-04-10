@@ -35,6 +35,7 @@
 #include "cs104_frame.h"
 #include "hal_thread.h"
 #include "hal_socket.h"
+
 #include "hal_time.h"
 #include "lib_memory.h"
 
@@ -195,6 +196,17 @@ struct sCS104_Connection {
 
     //===============  104 connection : as client and as slave device(simulation equipment) ==============//
 
+
+    unsigned char connectionType;//通讯方式：1-网络通讯（客户端） 2-网络通讯（服务端的子连接）  3-串口通讯
+    //===============  104 connection :  SerialPort ==============//
+    SerialPort commPort;
+    bool isCommOpend;
+    int messageTimeout;
+    int characterTimeout;
+    //Thread commThread;
+
+    //===============  104 connection :  SerialPort ==============//
+
 }connectionHandler;
 
 //===============  104 connection : as server and as master station ==============//
@@ -321,7 +333,12 @@ sendSMessage(CS104_Connection self)
     msg [4] = (uint8_t) ((self->receiveCount % 128) * 2);
     msg [5] = (uint8_t) (self->receiveCount / 128);
 
-    writeToSocket(self, msg, 6);
+    if(self->connectionType == 3)//串口
+    {
+        SerialPort_write(self->commPort, msg, 0, 6);
+    }
+    else
+        writeToSocket(self, msg, 6);
 
     if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()
     {
@@ -342,7 +359,12 @@ sendIMessage(CS104_Connection self, Frame frame)
 {
     T104Frame_prepareToSend((T104Frame) frame, self->sendCount, self->receiveCount);
 
-    writeToSocket(self, T104Frame_getBuffer(frame), T104Frame_getMsgSize(frame));
+    if(self->connectionType == 3)//串口
+    {
+        SerialPort_write(self->commPort, T104Frame_getBuffer(frame), 0, T104Frame_getMsgSize(frame));
+    }
+    else
+        writeToSocket(self, T104Frame_getBuffer(frame), T104Frame_getMsgSize(frame));
 //    unsigned long long timestamp = Hal_getTimeInMs();
 //    //DEBUG_PRINT("sendIMessage: time %ld\n", timestamp);//Hal_getTimeInMs()
 //#ifdef WIN32
@@ -432,6 +454,7 @@ createConnection(const char* hostname, int tcpPort)
         self->tlsConfig = NULL;
         self->tlsSocket = NULL;
 #endif
+        self->isCommOpend = false;
 
         self->sentASDUs = NULL;
 
@@ -444,10 +467,35 @@ createConnection(const char* hostname, int tcpPort)
 CS104_Connection
 CS104_Connection_create(const char* hostname, int tcpPort)
 {
-    if (tcpPort == -1)
-        tcpPort = IEC_60870_5_104_DEFAULT_PORT;
+//    if (tcpPort == -1)
+//        tcpPort = IEC_60870_5_104_DEFAULT_PORT;
 
-    return createConnection(hostname, tcpPort);
+//    return createConnection(hostname, tcpPort);
+
+    CS104_Connection self = createConnection(hostname, tcpPort);
+    if (self != NULL) {
+        self->commPort = NULL;
+        self->connectionType = 1;
+    }
+    return self;
+}
+
+bool CS104_Connection_getCommState(CS104_Connection self)
+{
+    return self->isCommOpend;
+}
+
+CS104_Connection
+CS104_Connection_create_comm(SerialPort serialPort)
+{
+    CS104_Connection self = createConnection("0.0.0.0", IEC_60870_5_104_DEFAULT_PORT);
+    if (self != NULL) {
+        self->commPort = serialPort;
+        self->connectionType = 3;
+    }
+
+
+    return self;
 }
 
 CS104_Connection
@@ -688,6 +736,28 @@ CS104_Connection_destroy(CS104_Connection self)
 }
 
 void
+CS104_Connection_destroy_comm(CS104_Connection self)
+{
+    if(self)
+    {
+        SerialPort_close(self->commPort);
+        SerialPort_destroy(self->commPort);
+        self->isCommOpend = false;//self->running = false;
+
+    #if (CONFIG_USE_THREADS == 1)
+        if (self->connectionHandlingThread)
+        {
+            Thread_destroy(self->connectionHandlingThread);
+            self->connectionHandlingThread = NULL;
+        }
+    #endif
+    }
+
+
+    GLOBAL_FREEMEM(self);
+}
+
+void
 CS104_Connection_destroy_mStation_one(CS104_Connection self)
 {
     CS104_Connection_close_mStation(self);
@@ -766,28 +836,30 @@ receiveMessageSocket(Socket socket, uint8_t* buffer)
 
     if (readFirst < 1)
     {
-#ifdef WIN32
-        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"Socket_read(socket, buffer, 1) return value < 1,value is "<<readFirst;
-#else
-        syslog(LOG_WARNING,"LIB60870:Socket_read(socket, buffer, 1) return value < 1,value is %d",readFirst);
-#endif
+//#ifdef WIN32
+//        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"Socket_read(socket, buffer, 1) return value < 1,value is "<<readFirst;
+//#else
+//        syslog(LOG_WARNING,"LIB60870:Socket_read(socket, buffer, 1) return value < 1,value is %d",readFirst);
+//#endif
+        DEBUG_PRINT("DEBUG_LIB60870:(warnning)Socket_read(socket, buffer, 1) return value < 1,value is  = %i\n", readFirst);
         return readFirst;
     }
 
     if (buffer[0] != 0x68)
     {
-#ifdef WIN32
-        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"message error,buffer[0] != 0x68,buffer[0] =="<<buffer[0];
-#endif
-
+//#ifdef WIN32
+//        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"message error,buffer[0] != 0x68,buffer[0] =="<<buffer[0];
+//#endif
+        DEBUG_PRINT("DEBUG_LIB60870:(warnning)message error,buffer[0] != 0x68,buffer[0] == %i\n", buffer[0]);
         return -1; /* message error */
     }
 
     if (Socket_read(socket, buffer + 1, 1) != 1)
     {
-#ifdef WIN32
-        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"Socket_read(socket, buffer + 1, 1) != 1";
-#endif
+//#ifdef WIN32
+//        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"Socket_read(socket, buffer + 1, 1) != 1";
+//#endif
+        DEBUG_PRINT("DEBUG_LIB60870:(warnning)Socket_read(socket, buffer + 1, 1) != 1\n");
         return -1;
     }
 
@@ -796,9 +868,10 @@ receiveMessageSocket(Socket socket, uint8_t* buffer)
     /* read remaining frame */
     if (Socket_read(socket, buffer + 2, length) != length)
     {
-#ifdef WIN32
-        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"message error,Socket_read(socket, buffer + 2, length) != buffer[1]";
-#endif
+//#ifdef WIN32
+//        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"message error,Socket_read(socket, buffer + 2, length) != buffer[1]";
+//#endif
+        DEBUG_PRINT("DEBUG_LIB60870:(warnning)message error,Socket_read(socket, buffer + 2, length) != buffer[1]\n");
         return -1;
     }
 
@@ -844,9 +917,10 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
     }
 
     if ((buffer[2] & 1) == 0) { /* I format frame */
-#ifdef WIN32
-        qDebug()<<"ReceivedIMessage: "<<Hal_getTimeInMs();
-#endif
+//#ifdef WIN32
+//        qDebug()<<"ReceivedIMessage: "<<Hal_getTimeInMs();
+//#endif
+        DEBUG_PRINT("ReceivedIMessage:  = %i \n", Hal_getTimeInMs());
 
         if (self->firstIMessageReceived == false) {
             self->firstIMessageReceived = true;
@@ -863,10 +937,10 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
         int frameSendSequenceNumber = ((buffer [3] * 0x100) + (buffer [2] & 0xfe)) / 2;
         int frameRecvSequenceNumber = ((buffer [5] * 0x100) + (buffer [4] & 0xfe)) / 2;
 
-        //DEBUG_PRINT("Received I frame: N(S) = %i N(R) = %i\n", frameSendSequenceNumber, frameRecvSequenceNumber);
-#ifdef WIN32
-        qDebug()<<"DEBUG_LIB60870: "<<"Received I frame: N(S) = "<<frameSendSequenceNumber<<" N(R) = "<<frameRecvSequenceNumber;
-#endif
+        DEBUG_PRINT("Received I frame: N(S) = %i N(R) = %i\n", frameSendSequenceNumber, frameRecvSequenceNumber);
+//#ifdef WIN32
+//        qDebug()<<"DEBUG_LIB60870: "<<"Received I frame: N(S) = "<<frameSendSequenceNumber<<" N(R) = "<<frameRecvSequenceNumber;
+//#endif
         /* check the receive sequence number N(R) - connection will be closed on an unexpected value */
         if (frameSendSequenceNumber != self->receiveCount) {
             DEBUG_PRINT("checkMessage return false(I format frame),frameSendSequenceNumber error: (Shoud) Close connection!");
@@ -944,7 +1018,12 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
 //            //qDebug()<<"DEBUG_LIB60870:"<<"(for printtest)Send TESTFR_CON\n";
 //            if (self->importantInfoHandler != NULL)
 //                self->importantInfoHandler(self->importantInfoHandlerParameter, "Send TESTFR_CON!");//
-            writeToSocket(self, TESTFR_CON_MSG, TESTFR_CON_MSG_SIZE);
+            if(self->connectionType == 3)//串口
+            {
+                SerialPort_write(self->commPort, TESTFR_CON_MSG, 0, TESTFR_CON_MSG_SIZE);
+            }
+            else
+                writeToSocket(self, TESTFR_CON_MSG, TESTFR_CON_MSG_SIZE);
 
             if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()   ,Hal_getTimeInMs()
             {
@@ -966,7 +1045,12 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
             self->receiveCount = 0;//clear seqnum
             self->sendCount = 0;
             self->unconfirmedReceivedIMessages = 0;
-            writeToSocket(self, STARTDT_CON_MSG, STARTDT_CON_MSG_SIZE);
+            if(self->connectionType == 3)//串口
+            {
+                SerialPort_write(self->commPort, STARTDT_CON_MSG, 0, STARTDT_CON_MSG_SIZE);
+            }
+            else
+                writeToSocket(self, STARTDT_CON_MSG, STARTDT_CON_MSG_SIZE);
 
             if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()  ,Hal_getTimeInMs()
             {
@@ -1045,7 +1129,12 @@ handleTimeouts(CS104_Connection self)
         else {
             //DEBUG_PRINT("U message T3 timeout");//\n 长期空闲状态下发送测试帧的超时
 
-            writeToSocket(self, TESTFR_ACT_MSG, TESTFR_ACT_MSG_SIZE);
+            if(self->connectionType == 3)//串口
+            {
+                SerialPort_write(self->commPort, TESTFR_ACT_MSG, 0, TESTFR_ACT_MSG_SIZE);
+            }
+            else
+                writeToSocket(self, TESTFR_ACT_MSG, TESTFR_ACT_MSG_SIZE);
             if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()  ,Hal_getTimeInMs()
             {
                 self->cs104_frame.TI = 0;
@@ -1229,6 +1318,101 @@ handleConnection(void* parameter)
     return NULL;
 }
 
+static int
+readBytesWithTimeout(CS104_Connection self, uint8_t* buffer, int startIndex, int count)
+{
+    int readByte;
+    int readBytes = 0;
+
+    while ((readByte = SerialPort_readByte(self->commPort)) != -1) {
+        buffer[startIndex++] = (uint8_t) readByte;
+
+        readBytes++;
+
+        if (readBytes >= count)
+            break;
+    }
+
+    return readBytes;
+}
+
+static void*
+handleConnection_comm(void* parameter)
+{
+    CS104_Connection self = (CS104_Connection) parameter;
+
+    resetConnection(self);
+
+    self->isCommOpend = true;
+    //self->running = true;
+    uint8_t buffer[520];
+
+    while(self->isCommOpend){
+        SerialPort_setTimeout(self->commPort, self->messageTimeout);
+
+        int read = SerialPort_readByte(self->commPort);//起始帧
+
+        if (read != -1) {
+
+            if (read == 0x68) {
+
+                SerialPort_setTimeout(self->commPort, self->characterTimeout);
+
+                int msgSize = SerialPort_readByte(self->commPort);//报文长度
+
+                if (msgSize == -1)
+                    goto sync_error;
+
+                buffer[0] = (uint8_t) 0x68;
+                buffer[1] = (uint8_t) msgSize;
+
+                int readBytes = readBytesWithTimeout(self, buffer, 2, msgSize);
+
+                if (readBytes == msgSize) {//读取到完整帧，调用解帧函数
+                    if (checkMessage(self, buffer, msgSize+2) == false) {
+
+                    }
+
+                }
+                else {
+                    DEBUG_PRINT("RECV: Timeout reading variable length frame size = %i (expected = %i)\n", readBytes, msgSize);
+                }
+
+            }
+
+            else {
+                goto sync_error;
+            }
+
+        }
+        else
+        {
+            //self->isCommOpend = false;
+            //self->running = false;
+            return NULL;
+        }
+
+
+
+    sync_error:
+
+        DEBUG_PRINT("RECV: SYNC ERROR\n");
+
+        SerialPort_discardInBuffer(self->commPort);
+
+        return NULL;
+    }
+
+    /* Call connection handler */
+    if (self->connectionHandler != NULL)
+    {
+        self->connectionHandler(self->connectionHandlerParameter, self, CS104_CONNECTION_CLOSED);
+    }
+
+}
+
+
+
 static void*
 handleConnection_mStation(void* parameter)//
 {
@@ -1378,6 +1562,24 @@ CS104_Connection_connect(CS104_Connection self)
 }
 
 bool
+CS104_Connection_connect_comm(CS104_Connection self)
+{
+    self->isCommOpend = SerialPort_open(self->commPort);
+
+    if(self->isCommOpend)//成功打开串口，启动串口接收线程
+    {
+        //self->running = true;
+        self->connectionHandlingThread = Thread_create(handleConnection_comm, (void*) self, false);
+
+        if (self->connectionHandlingThread)
+            Thread_start(self->connectionHandlingThread);
+    }
+
+    return self->isCommOpend ;
+
+}
+
+bool
 CS104_Connection_connect_mStation(CS104_Connection self)
 {
     //resetConnection(self);
@@ -1483,7 +1685,12 @@ encodeIOA(CS104_Connection self, Frame frame, int ioa)
 void
 CS104_Connection_sendStartDT(CS104_Connection self)
 {
-    writeToSocket(self, STARTDT_ACT_MSG, STARTDT_ACT_MSG_SIZE);
+    if(self->connectionType == 3)//串口
+    {
+        SerialPort_write(self->commPort, STARTDT_ACT_MSG, 0, STARTDT_ACT_MSG_SIZE);
+    }
+    else
+        writeToSocket(self, STARTDT_ACT_MSG, STARTDT_ACT_MSG_SIZE);
     if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()   ,Hal_getTimeInMs()
     {
         self->cs104_frame.TI = 0;
@@ -1499,7 +1706,12 @@ CS104_Connection_sendStartDT(CS104_Connection self)
 void
 CS104_Connection_sendStopDT(CS104_Connection self)
 {
-    writeToSocket(self, STOPDT_ACT_MSG, STOPDT_ACT_MSG_SIZE);
+    if(self->connectionType == 3)//串口
+    {
+        SerialPort_write(self->commPort, STOPDT_ACT_MSG, 0, STOPDT_ACT_MSG_SIZE);
+    }
+    else
+        writeToSocket(self, STOPDT_ACT_MSG, STOPDT_ACT_MSG_SIZE);
     if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()   ,Hal_getTimeInMs()
     {
         self->cs104_frame.TI = 0;
@@ -1544,7 +1756,7 @@ sendASDUInternal(CS104_Connection self, Frame frame)
 {
     bool retVal = false;
 
-    if (self->running) {
+    if (self->running||self->isCommOpend) {
         if (isSentBufferFull(self) == false) {
             sendIMessageAndUpdateSentASDUs(self, frame);
             retVal = true;
@@ -1792,7 +2004,13 @@ bool CS104_Connection_sendSelfdefinedFrame(CS104_Connection self,unsigned char* 
     }
 
     //writeToSocket(CS104_Connection self, uint8_t* buf, int size)
-    int rtn = writeToSocket(self, (uint8_t*)buf, len);
+    int rtn;
+    if(self->connectionType == 3)//串口
+    {
+        rtn = SerialPort_write(self->commPort, (uint8_t*)buf, 0, len);
+    }
+    else
+        rtn = writeToSocket(self, (uint8_t*)buf, len);
 
     if(rtn < len)
     {
@@ -2617,13 +2835,21 @@ sendIMessage_sDEV(CS104_Connection self, uint8_t* buffer, int msgSize)
     buffer[4] = (uint8_t) ((self->receiveCount % 128) * 2);
     buffer[5] = (uint8_t) (self->receiveCount / 128);
 
-    if (writeToSocket(self, buffer, msgSize) != -1) {
-        DEBUG_PRINT("SEND I (size = %i) N(S) = %i N(R) = %i\n", msgSize, self->sendCount, self->receiveCount);
-        self->sendCount = (self->sendCount + 1) % 32768;
-        self->unconfirmedReceivedIMessages = 0;
+    if(self->connectionType == 3)//串口
+    {
+        SerialPort_write(self->commPort, buffer, 0, msgSize);
     }
     else
-        self->running = false;
+    {
+        if (writeToSocket(self, buffer, msgSize) != -1) {
+            DEBUG_PRINT("SEND I (size = %i) N(S) = %i N(R) = %i\n", msgSize, self->sendCount, self->receiveCount);
+            self->sendCount = (self->sendCount + 1) % 32768;
+            self->unconfirmedReceivedIMessages = 0;
+        }
+        else
+            self->running = false;
+    }
+
 
     self->unconfirmedReceivedIMessages = 0;
 
@@ -3099,7 +3325,12 @@ handleMessage_sDEV(CS104_Connection self, uint8_t* buffer, int msgSize)
     else if ((buffer[2] & 0x43) == 0x43) {
         DEBUG_PRINT("Send TESTFR_CON\n");
 
-        writeToSocket(self, TESTFR_CON_MSG, TESTFR_CON_MSG_SIZE);
+        if(self->connectionType == 3)//串口
+        {
+            SerialPort_write(self->commPort, TESTFR_CON_MSG, 0, TESTFR_CON_MSG_SIZE);
+        }
+        else
+            writeToSocket(self, TESTFR_CON_MSG, TESTFR_CON_MSG_SIZE);
     }
 
     /* Check for STARTDT_ACT message */
@@ -3110,7 +3341,12 @@ handleMessage_sDEV(CS104_Connection self, uint8_t* buffer, int msgSize)
         self->sendCount = 0;
         self->unconfirmedReceivedIMessages = 0;
 
-        writeToSocket(self, STARTDT_CON_MSG, STARTDT_CON_MSG_SIZE);
+        if(self->connectionType == 3)//串口
+        {
+            SerialPort_write(self->commPort, STARTDT_CON_MSG, 0, STARTDT_CON_MSG_SIZE);
+        }
+        else
+            writeToSocket(self, STARTDT_CON_MSG, STARTDT_CON_MSG_SIZE);
     }
 
     /* Check for STOPDT_ACT message */
@@ -3119,7 +3355,12 @@ handleMessage_sDEV(CS104_Connection self, uint8_t* buffer, int msgSize)
 
         self->isActive = false;
 
-        writeToSocket(self, STOPDT_CON_MSG, STOPDT_CON_MSG_SIZE);
+        if(self->connectionType == 3)//串口
+        {
+            SerialPort_write(self->commPort, STOPDT_CON_MSG, 0, STOPDT_CON_MSG_SIZE);
+        }
+        else
+            writeToSocket(self, STOPDT_CON_MSG, STOPDT_CON_MSG_SIZE);
     }
 
     /* Check for TESTFR_CON message */
@@ -3171,7 +3412,12 @@ handleTimeouts_sDEV(CS104_Connection self)
         }
         else {
             //\n 长期空闲状态下发送测试帧的超时(设备端主动发出)
-            writeToSocket(self, TESTFR_ACT_MSG, TESTFR_ACT_MSG_SIZE);
+            if(self->connectionType == 3)//串口
+            {
+                SerialPort_write(self->commPort, TESTFR_ACT_MSG, 0, TESTFR_ACT_MSG_SIZE);
+            }
+            else
+                writeToSocket(self, TESTFR_ACT_MSG, TESTFR_ACT_MSG_SIZE);
 
             self->uMessageTimeout = currentTime + (self->parameters.t1 * 1000);
             self->outstandingTestFCConMessages++;

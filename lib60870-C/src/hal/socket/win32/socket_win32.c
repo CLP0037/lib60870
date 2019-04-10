@@ -416,19 +416,22 @@ Socket_read(Socket self, uint8_t* buf, int size)
 
     if (bytes_read == 0) // peer has closed socket
     {
-        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"recv(self->fd, (char*) buf, size, 0)==0,peer has closed socket";
+        //qDebug()<<"DEBUG_LIB60870:(warnning)"<<"recv(self->fd, (char*) buf, size, 0)==0,peer has closed socket";
+        DEBUG_PRINT("DEBUG_LIB60870:(warnning)recv(self->fd, (char*) buf, size, 0)==0,peer has closed socket\n");
         return -1;
     }
 
     if (bytes_read == SOCKET_ERROR) {
         if (WSAGetLastError() == WSAEWOULDBLOCK)
         {
-            qDebug()<<"DEBUG_LIB60870:(warnning)"<<"recv(self->fd, (char*) buf, size, 0)==SOCKET_ERROR,WSAGetLastError()==WSAEWOULDBLOCK";
+            //qDebug()<<"DEBUG_LIB60870:(warnning)"<<"recv(self->fd, (char*) buf, size, 0)==SOCKET_ERROR,WSAGetLastError()==WSAEWOULDBLOCK";
+            DEBUG_PRINT("DEBUG_LIB60870:(warnning)recv(self->fd, (char*) buf, size, 0)==SOCKET_ERROR,WSAGetLastError()==WSAEWOULDBLOCK\n");
             return 0;
         }
         else
         {
-            qDebug()<<"DEBUG_LIB60870:(warnning)"<<"recv(self->fd, (char*) buf, size, 0)==SOCKET_ERROR";
+            //qDebug()<<"DEBUG_LIB60870:(warnning)"<<"recv(self->fd, (char*) buf, size, 0)==SOCKET_ERROR";
+            DEBUG_PRINT("DEBUG_LIB60870:(warnning)recv(self->fd, (char*) buf, size, 0)==SOCKET_ERROR\n");
             return -1;
         }
     }
