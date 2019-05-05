@@ -47,6 +47,7 @@
 #include "linked_list.h"
 
 #define CS104_DEFAULT_PORT 2404
+#define CS104_DEFAULT_PORT_104P 2402  //104+ default port:2402
 
 struct sCS104_APCIParameters defaultAPCIParameters = {
 		/* .k = */ 12,
@@ -207,6 +208,12 @@ struct sCS104_Connection {
 
     //===============  104 connection :  SerialPort ==============//
 
+    //===============  104+ connection  ==============//
+    unsigned char baseProtocalType;//基本规约类型：1-104   2-104+
+    uint8_t sMessage_104P[7];
+    int shortframesize;//短帧长度/长帧基准长度
+    //===============  104+ connection  ==============//
+
 }connectionHandler;
 
 //===============  104 connection : as server and as master station ==============//
@@ -278,7 +285,6 @@ struct sCS104_Connection_sDEV{
 };
 
 static uint8_t STOPDT_CON_MSG[] = { 0x68, 0x04, 0x23, 0x00, 0x00, 0x00 };
-
 #define STOPDT_CON_MSG_SIZE 6
 //===============  104 connection : as client and as slave device(simulation equipment) ==============//
 
@@ -296,6 +302,26 @@ static uint8_t STOPDT_ACT_MSG[] = { 0x68, 0x04, 0x13, 0x00, 0x00, 0x00 };
 
 static uint8_t STARTDT_CON_MSG[] = { 0x68, 0x04, 0x0b, 0x00, 0x00, 0x00 };
 #define STARTDT_CON_MSG_SIZE 6
+
+//===============  104+(104P: 104 plus) connection ==============//
+static uint8_t STARTDT_ACT_MSG_104P[] = { 0x68, 0x04, 0x00, 0x07, 0x00, 0x00, 0x00 };
+#define STARTDT_ACT_MSG_SIZE_104P 7
+
+static uint8_t TESTFR_ACT_MSG_104P[] = { 0x68, 0x04, 0x00, 0x43, 0x00, 0x00, 0x00 };
+#define TESTFR_ACT_MSG_SIZE_104P 7
+
+static uint8_t TESTFR_CON_MSG_104P[] = { 0x68, 0x04, 0x00, 0x83, 0x00, 0x00, 0x00 };
+#define TESTFR_CON_MSG_SIZE_104P 7
+
+static uint8_t STOPDT_ACT_MSG_104P[] = { 0x68, 0x04, 0x00, 0x13, 0x00, 0x00, 0x00 };
+#define STOPDT_ACT_MSG_SIZE_104P 7
+
+static uint8_t STARTDT_CON_MSG_104P[] = { 0x68, 0x04, 0x00, 0x0b, 0x00, 0x00, 0x00 };
+#define STARTDT_CON_MSG_SIZE_104P 7
+
+static uint8_t STOPDT_CON_MSG_104P[] = { 0x68, 0x04, 0x00, 0x23, 0x00, 0x00, 0x00 };
+#define STOPDT_CON_MSG_SIZE_104P 7
+//===============  104+ connection ==============//
 
 static inline int
 writeToSocket(CS104_Connection self, uint8_t* buf, int size)
@@ -323,22 +349,50 @@ prepareSMessage(uint8_t* msg)
     msg[1] = 0x04;
     msg[2] = 0x01;
     msg[3] = 0x00;
+
+}
+
+static void
+prepareSMessage_104P(uint8_t* msg)
+{
+    msg[0] = 0x68;
+    msg[1] = 0x04;
+    msg[2] = 0x00;
+    msg[3] = 0x01;
+    msg[4] = 0x00;
 }
 
 static void
 sendSMessage(CS104_Connection self)
 {
-    uint8_t* msg = self->sMessage;
+    uint8_t* msg;
+    int msgsize;
+    if(self->baseProtocalType == 2)
+    {
+        msg = self->sMessage_104P;
+        msgsize = 7;
+        msg [5] = (uint8_t) ((self->receiveCount % 128) * 2);
+        msg [6] = (uint8_t) (self->receiveCount / 128);
+    }
+    else
+    {
+        msg = self->sMessage;
+        msgsize = 6;
+        msg [4] = (uint8_t) ((self->receiveCount % 128) * 2);
+        msg [5] = (uint8_t) (self->receiveCount / 128);
+    }
 
-    msg [4] = (uint8_t) ((self->receiveCount % 128) * 2);
-    msg [5] = (uint8_t) (self->receiveCount / 128);
+//    uint8_t* msg = self->sMessage;
+
+//    msg [4] = (uint8_t) ((self->receiveCount % 128) * 2);
+//    msg [5] = (uint8_t) (self->receiveCount / 128);
 
     if(self->connectionType == 3)//串口
     {
-        SerialPort_write(self->commPort, msg, 0, 6);
+        SerialPort_write(self->commPort, msg, 0, msgsize);//6
     }
     else
-        writeToSocket(self, msg, 6);
+        writeToSocket(self, msg, msgsize);//6
 
     if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()
     {
@@ -349,15 +403,17 @@ sendSMessage(CS104_Connection self)
         self->cs104_frame.NR = self->receiveCount;
         self->cs104_frame.NS = self->sendCount;
         self->cs104_frame.FT = 3;//frame type帧类型：1-I帧 2-U帧 3-S帧
-
-        self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, msg, 6,"S_frame_explain",self->cs104_frame,NULL);//,Hal_getTimeInMs()
+        //6
+        self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, msg, msgsize,"S_frame_explain",self->cs104_frame,NULL);//,Hal_getTimeInMs()
     }
 }
 
 static int
 sendIMessage(CS104_Connection self, Frame frame)
 {
-    T104Frame_prepareToSend((T104Frame) frame, self->sendCount, self->receiveCount);
+    //T104Frame_prepareToSend((T104Frame) frame, self->sendCount, self->receiveCount);
+    T104Frame_prepareToSend_104P((T104Frame) frame, self->sendCount, self->receiveCount, self->baseProtocalType);
+
 
     if(self->connectionType == 3)//串口
     {
@@ -372,7 +428,16 @@ sendIMessage(CS104_Connection self, Frame frame)
 //#endif
     if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()   ,timestamp
     {
-        CS101_ASDU asdu = CS101_ASDU_createFromBuffer((CS101_AppLayerParameters)&(self->alParameters), T104Frame_getBuffer(frame) + 6, T104Frame_getMsgSize(frame) - 6);
+        //CS101_ASDU asdu = CS101_ASDU_createFromBuffer((CS101_AppLayerParameters)&(self->alParameters), T104Frame_getBuffer(frame) + 6, T104Frame_getMsgSize(frame) - 6);
+        CS101_ASDU asdu;
+        if(self->baseProtocalType == 2)//104+
+        {
+            asdu = CS101_ASDU_createFromBuffer((CS101_AppLayerParameters)&(self->alParameters), T104Frame_getBuffer(frame) + 7, T104Frame_getMsgSize(frame) - 7);
+        }
+        else
+        {
+            asdu = CS101_ASDU_createFromBuffer((CS101_AppLayerParameters)&(self->alParameters), T104Frame_getBuffer(frame) + 6, T104Frame_getMsgSize(frame) - 6);
+        }
         //按规约类型分别赋值解析描述
         if (asdu != NULL)
         {
@@ -388,7 +453,7 @@ sendIMessage(CS104_Connection self, Frame frame)
 //#ifdef WIN32
 //        qDebug()<<"sendIMessage(before msgsendHandler): "<<Hal_getTimeInMs();//timestamp
 //#endif
-            self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, T104Frame_getBuffer(frame), T104Frame_getMsgSize(frame),"S_frame_explain",self->cs104_frame,asdu);//Hal_getTimeInMs()
+            self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, T104Frame_getBuffer(frame), T104Frame_getMsgSize(frame),"I_frame_explain",self->cs104_frame,asdu);//Hal_getTimeInMs()
 //#ifdef WIN32
 //        qDebug()<<"sendIMessage(after msgsendHandler): "<<Hal_getTimeInMs();//timestamp
 //#endif
@@ -442,6 +507,8 @@ createConnection(const char* hostname, int tcpPort)
         self->cs104_frame.NR = 0;
         self->cs104_frame.EC = 0;
         self->cs104_frame.FT = 0;
+        self->receiveCount = 0;//clear seqnum
+        self->sendCount = 0;
 
         self->importantInfoHandler = NULL;
         self->importantInfoHandlerParameter = NULL;
@@ -457,8 +524,21 @@ createConnection(const char* hostname, int tcpPort)
         self->isCommOpend = false;
 
         self->sentASDUs = NULL;
+        //
+        if(tcpPort == CS104_DEFAULT_PORT_104P)//
+        {
+            self->baseProtocalType = 2;
+            self->shortframesize = 7;
+            prepareSMessage_104P(self->sMessage_104P);
 
-        prepareSMessage(self->sMessage);
+        }
+        else
+        {
+            self->baseProtocalType = 1;//基本规约类型：1-104   2-104+
+            self->shortframesize = 6;
+            prepareSMessage(self->sMessage);
+
+        }
     }
 
     return self;
@@ -773,6 +853,36 @@ CS104_Connection_destroy_mStation_one(CS104_Connection self)
 }
 
 void
+CS104_Connection_setProtocalType(CS104_Connection self, unsigned char baseProtocalType)
+{
+    if(self)
+    {
+        self->baseProtocalType = baseProtocalType;
+
+        if(baseProtocalType == 2)//改变规约类型，修改相关参数
+        {
+            self->shortframesize = 7;
+            prepareSMessage_104P(self->sMessage_104P);
+        }
+        else
+        {
+            self->shortframesize = 6;
+            prepareSMessage(self->sMessage);
+        }
+    }
+}
+
+unsigned char
+CS104_Connection_getProtocalType(CS104_Connection self)
+{
+    if(self)
+    {
+        return self->baseProtocalType;
+    }
+    return 0;
+}
+
+void
 CS104_Connection_setAPCIParameters(CS104_Connection self, CS104_APCIParameters parameters)
 {
     self->parameters = *parameters;
@@ -924,7 +1034,13 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
     }
     else  //0x68=====104
     {
-    if ((buffer[2] & 1) == 0) { /* I format frame */
+        unsigned char apduStartBuf;
+        if(self->baseProtocalType == 2)
+            apduStartBuf = buffer[3];
+        else
+            apduStartBuf = buffer[2];
+
+    if ((apduStartBuf & 1) == 0) {//buffer[2] /* I format frame */
 //#ifdef WIN32
 //        qDebug()<<"ReceivedIMessage: "<<Hal_getTimeInMs();
 //#endif
@@ -942,8 +1058,21 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
             return false;
         }
 
-        int frameSendSequenceNumber = ((buffer [3] * 0x100) + (buffer [2] & 0xfe)) / 2;
-        int frameRecvSequenceNumber = ((buffer [5] * 0x100) + (buffer [4] & 0xfe)) / 2;
+//        int frameSendSequenceNumber = ((buffer [3] * 0x100) + (buffer [2] & 0xfe)) / 2;
+//        int frameRecvSequenceNumber = ((buffer [5] * 0x100) + (buffer [4] & 0xfe)) / 2;
+        int frameSendSequenceNumber;
+        int frameRecvSequenceNumber;
+        if(self->baseProtocalType == 2)//104+
+        {
+            frameSendSequenceNumber = ((buffer [4] * 0x100) + (buffer [3] & 0xfe)) / 2;
+            frameRecvSequenceNumber = ((buffer [6] * 0x100) + (buffer [5] & 0xfe)) / 2;
+
+        }
+        else
+        {
+            frameSendSequenceNumber = ((buffer [3] * 0x100) + (buffer [2] & 0xfe)) / 2;
+            frameRecvSequenceNumber = ((buffer [5] * 0x100) + (buffer [4] & 0xfe)) / 2;
+        }
 
         DEBUG_PRINT("Received I frame: N(S) = %i N(R) = %i\n", frameSendSequenceNumber, frameRecvSequenceNumber);
 //#ifdef WIN32
@@ -968,7 +1097,16 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
         self->receiveCount = (self->receiveCount + 1) % 32768;
         self->unconfirmedReceivedIMessages++;
 
-        CS101_ASDU asdu = CS101_ASDU_createFromBuffer((CS101_AppLayerParameters)&(self->alParameters), buffer + 6, msgSize - 6);
+        //CS101_ASDU asdu = CS101_ASDU_createFromBuffer((CS101_AppLayerParameters)&(self->alParameters), buffer + 6, msgSize - 6);
+        CS101_ASDU asdu;
+        if(self->baseProtocalType == 2)//104+
+        {
+            asdu = CS101_ASDU_createFromBuffer((CS101_AppLayerParameters)&(self->alParameters), buffer + 7, msgSize - 7);
+        }
+        else
+        {
+            asdu = CS101_ASDU_createFromBuffer((CS101_AppLayerParameters)&(self->alParameters), buffer + 6, msgSize - 6);
+        }
 
         if (asdu != NULL) {
 //            if (self->receivedHandler != NULL)
@@ -1006,7 +1144,7 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
         }
 
     }
-    else if ((buffer[2] & 0x03) == 0x03) { /* U format frame */
+    else if ((apduStartBuf & 0x03) == 0x03) {//buffer[2] /* U format frame */
 
         //DEBUG_PRINT("Received U frame");//\n
         self->cs104_frame.TI = 0;
@@ -1019,7 +1157,7 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
 
         self->uMessageTimeout = 0;
 
-        if (buffer[2] == 0x43) { /* Check for TESTFR_ACT message */
+        if (apduStartBuf == 0x43) {//buffer[2] /* Check for TESTFR_ACT message */
 //            DEBUG_PRINT("Send TESTFR_CON");//\n
             if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()  ,Hal_getTimeInMs()
                 self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Send TESTFR_CON",self->cs104_frame,NULL);
@@ -1028,17 +1166,36 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
 //                self->importantInfoHandler(self->importantInfoHandlerParameter, "Send TESTFR_CON!");//
             if(self->connectionType == 3)//串口
             {
-                SerialPort_write(self->commPort, TESTFR_CON_MSG, 0, TESTFR_CON_MSG_SIZE);
+                if(self->baseProtocalType == 2)
+                {
+                    SerialPort_write(self->commPort, TESTFR_CON_MSG_104P, 0, TESTFR_CON_MSG_SIZE_104P);
+                }
+                else
+                    SerialPort_write(self->commPort, TESTFR_CON_MSG, 0, TESTFR_CON_MSG_SIZE);
             }
             else
-                writeToSocket(self, TESTFR_CON_MSG, TESTFR_CON_MSG_SIZE);
+            {
+                if(self->baseProtocalType == 2)
+                {
+                    writeToSocket(self, TESTFR_CON_MSG_104P, TESTFR_CON_MSG_SIZE_104P);
+                }
+                else
+                    writeToSocket(self, TESTFR_CON_MSG, TESTFR_CON_MSG_SIZE);
+            }
+
+//            int tempsize_shortframe = 6;//tempsize_shortframe/*6*/
+//            if(self->baseProtocalType == 2)
+//            {
+//                tempsize_shortframe = 7;
+//            }
+
 
             if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()   ,Hal_getTimeInMs()
             {
-                self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, buffer, 6,"Send TESTFR_CON",self->cs104_frame,NULL);//
+                self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, buffer, self->shortframesize/*6*/,"Send TESTFR_CON",self->cs104_frame,NULL);//
             }
         }
-        else if (buffer[2] == 0x83) { /* TESTFR_CON */
+        else if (apduStartBuf == 0x83) {//buffer[2] /* TESTFR_CON */
 //            DEBUG_PRINT("Rcvd TESTFR_CON");//\n
             if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()    ,Hal_getTimeInMs()
                 self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Rcvd TESTFR_CON",self->cs104_frame,NULL);
@@ -1046,7 +1203,7 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
 
             self->outstandingTestFCConMessages = 0;
         }
-        else if (buffer[2] == 0x07) { /* STARTDT_ACT */
+        else if (apduStartBuf == 0x07) {//buffer[2] /* STARTDT_ACT */
             //DEBUG_PRINT("Send STARTDT_CON");//\n
             if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()    ,Hal_getTimeInMs()
                 self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Send STARTDT_CON",self->cs104_frame,NULL);
@@ -1055,17 +1212,29 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
             self->unconfirmedReceivedIMessages = 0;
             if(self->connectionType == 3)//串口
             {
-                SerialPort_write(self->commPort, STARTDT_CON_MSG, 0, STARTDT_CON_MSG_SIZE);
+                if(self->baseProtocalType == 2)
+                {
+                    SerialPort_write(self->commPort, STARTDT_CON_MSG_104P, 0, STARTDT_CON_MSG_SIZE_104P);
+                }
+                else
+                    SerialPort_write(self->commPort, STARTDT_CON_MSG, 0, STARTDT_CON_MSG_SIZE);
             }
             else
-                writeToSocket(self, STARTDT_CON_MSG, STARTDT_CON_MSG_SIZE);
+            {
+                if(self->baseProtocalType == 2)
+                {
+                    writeToSocket(self, STARTDT_CON_MSG_104P, STARTDT_CON_MSG_SIZE_104P);
+                }
+                else
+                    writeToSocket(self, STARTDT_CON_MSG, STARTDT_CON_MSG_SIZE);
+            }
 
             if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()  ,Hal_getTimeInMs()
             {
-                self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, buffer, 6,"Send STARTDT_CON",self->cs104_frame,NULL);//
+                self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, buffer, self->shortframesize/*6*/,"Send STARTDT_CON",self->cs104_frame,NULL);//
             }
         }
-        else if (buffer[2] == 0x0b) { /* STARTDT_CON */
+        else if (apduStartBuf == 0x0b) {//buffer[2] /* STARTDT_CON */
             //DEBUG_PRINT("Received STARTDT_CON");//\n
             if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()   ,Hal_getTimeInMs()
                 self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Rcvd STARTDT_CON",self->cs104_frame,NULL);
@@ -1077,7 +1246,7 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
             if (self->connectionHandler != NULL)
                 self->connectionHandler(self->connectionHandlerParameter, self, CS104_CONNECTION_STARTDT_CON_RECEIVED);
         }
-        else if (buffer[2] == 0x23) { /* STOPDT_CON */
+        else if (apduStartBuf == 0x23) {//buffer[2] /* STOPDT_CON */
             //DEBUG_PRINT("Received STOPDT_CON");//\n
             if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()    ,Hal_getTimeInMs()
                 self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Rcvd STOPDT_CON",self->cs104_frame,NULL);
@@ -1087,8 +1256,17 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
         }
 
     }
-    else if (buffer [2] == 0x01) { /* S-message */
-        int seqNo = (buffer[4] + buffer[5] * 0x100) / 2;
+    else if (apduStartBuf == 0x01) {//buffer [2] /* S-message */
+        //int seqNo = (buffer[4] + buffer[5] * 0x100) / 2;
+        int seqNo;
+        if(self->baseProtocalType == 2)//104+
+        {
+            seqNo = (buffer[5] + buffer[6] * 0x100) / 2;
+        }
+        else
+        {
+           seqNo = (buffer[4] + buffer[5] * 0x100) / 2;
+        }
         self->cs104_frame.TI = 0;
         self->cs104_frame.COT = 0;
         self->cs104_frame.EC = 0;
@@ -1139,10 +1317,22 @@ handleTimeouts(CS104_Connection self)
 
             if(self->connectionType == 3)//串口
             {
-                SerialPort_write(self->commPort, TESTFR_ACT_MSG, 0, TESTFR_ACT_MSG_SIZE);
+                if(self->baseProtocalType == 2)
+                {
+                    SerialPort_write(self->commPort, TESTFR_ACT_MSG_104P, 0, TESTFR_ACT_MSG_SIZE_104P);
+                }
+                else
+                    SerialPort_write(self->commPort, TESTFR_ACT_MSG, 0, TESTFR_ACT_MSG_SIZE);
             }
             else
-                writeToSocket(self, TESTFR_ACT_MSG, TESTFR_ACT_MSG_SIZE);
+            {
+                if(self->baseProtocalType == 2)
+                {
+                    writeToSocket(self, TESTFR_ACT_MSG_104P, TESTFR_ACT_MSG_SIZE_104P);
+                }
+                else
+                    writeToSocket(self, TESTFR_ACT_MSG, TESTFR_ACT_MSG_SIZE);
+            }
             if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()  ,Hal_getTimeInMs()
             {
                 self->cs104_frame.TI = 0;
@@ -1151,7 +1341,10 @@ handleTimeouts(CS104_Connection self)
                 self->cs104_frame.NR = 0;
                 self->cs104_frame.NS = 0;
                 self->cs104_frame.FT = 2;//frame type帧类型：1-I帧 2-U帧 3-S帧
-                self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, TESTFR_ACT_MSG, 6,"Send TESTFR_ASK(U message T3 timeout)",self->cs104_frame,NULL);//
+                if(self->baseProtocalType == 2)
+                    self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, TESTFR_ACT_MSG_104P, self->shortframesize/*6*/,"Send TESTFR_ASK(U message T3 timeout)",self->cs104_frame,NULL);//
+                else
+                    self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, TESTFR_ACT_MSG, self->shortframesize/*6*/,"Send TESTFR_ASK(U message T3 timeout)",self->cs104_frame,NULL);
             }
             self->uMessageTimeout = currentTime + (self->parameters.t1 * 1000);
             self->outstandingTestFCConMessages++;
@@ -1715,10 +1908,23 @@ CS104_Connection_sendStartDT(CS104_Connection self)
 {
     if(self->connectionType == 3)//串口
     {
-        SerialPort_write(self->commPort, STARTDT_ACT_MSG, 0, STARTDT_ACT_MSG_SIZE);
+        if(self->baseProtocalType == 2)
+        {
+            SerialPort_write(self->commPort, STARTDT_ACT_MSG_104P, 0, STARTDT_ACT_MSG_SIZE_104P);
+        }
+        else
+            SerialPort_write(self->commPort, STARTDT_ACT_MSG, 0, STARTDT_ACT_MSG_SIZE);
     }
     else
-        writeToSocket(self, STARTDT_ACT_MSG, STARTDT_ACT_MSG_SIZE);
+    {
+        if(self->baseProtocalType == 2)
+        {
+            writeToSocket(self, STARTDT_ACT_MSG_104P, STARTDT_ACT_MSG_SIZE_104P);
+        }
+        else
+            writeToSocket(self, STARTDT_ACT_MSG, STARTDT_ACT_MSG_SIZE);
+    }
+
     if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()   ,Hal_getTimeInMs()
     {
         self->cs104_frame.TI = 0;
@@ -1727,7 +1933,10 @@ CS104_Connection_sendStartDT(CS104_Connection self)
         self->cs104_frame.NR = 0;
         self->cs104_frame.NS = 0;
         self->cs104_frame.FT = 2;//frame type帧类型：1-I帧 2-U帧 3-S帧
-        self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, STARTDT_ACT_MSG, 6,"Send STARTDT_ACT",self->cs104_frame,NULL);//
+        if(self->baseProtocalType == 2)
+            self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, STARTDT_ACT_MSG_104P, self->shortframesize/*6*/,"Send STARTDT_ACT",self->cs104_frame,NULL);//
+        else
+            self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, STARTDT_ACT_MSG, self->shortframesize/*6*/,"Send STARTDT_ACT",self->cs104_frame,NULL);
     }
 }
 
@@ -1736,10 +1945,22 @@ CS104_Connection_sendStopDT(CS104_Connection self)
 {
     if(self->connectionType == 3)//串口
     {
-        SerialPort_write(self->commPort, STOPDT_ACT_MSG, 0, STOPDT_ACT_MSG_SIZE);
+        if(self->baseProtocalType == 2)
+        {
+            SerialPort_write(self->commPort, STOPDT_ACT_MSG_104P, 0, STOPDT_ACT_MSG_SIZE_104P);
+        }
+        else
+            SerialPort_write(self->commPort, STOPDT_ACT_MSG, 0, STOPDT_ACT_MSG_SIZE);
     }
     else
-        writeToSocket(self, STOPDT_ACT_MSG, STOPDT_ACT_MSG_SIZE);
+    {
+        if(self->baseProtocalType == 2)
+        {
+            writeToSocket(self, STOPDT_ACT_MSG_104P, STOPDT_ACT_MSG_SIZE_104P);
+        }
+        else
+            writeToSocket(self, STOPDT_ACT_MSG, STOPDT_ACT_MSG_SIZE);
+    }
     if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()   ,Hal_getTimeInMs()
     {
         self->cs104_frame.TI = 0;
@@ -1748,7 +1969,10 @@ CS104_Connection_sendStopDT(CS104_Connection self)
         self->cs104_frame.NR = 0;
         self->cs104_frame.NS = 0;
         self->cs104_frame.FT = 2;//frame type帧类型：1-I帧 2-U帧 3-S帧
-        self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, STOPDT_ACT_MSG, 6,"Send STOPDT_ACT",self->cs104_frame,NULL);//
+        if(self->baseProtocalType == 2)
+            self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, STOPDT_ACT_MSG_104P, self->shortframesize/*6*/,"Send STOPDT_ACT",self->cs104_frame,NULL);//
+        else
+            self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, STOPDT_ACT_MSG, self->shortframesize/*6*/,"Send STOPDT_ACT",self->cs104_frame,NULL);
     }
 }
 
@@ -1811,7 +2035,8 @@ ASDU 公共地址      2 字节
 bool
 CS104_Connection_sendInterrogationCommand(CS104_Connection self, CS101_CauseOfTransmission cot, int ca, QualifierOfInterrogation qoi)
 {
-    Frame frame = (Frame) T104Frame_create();
+    //Frame frame = (Frame) T104Frame_create();
+    Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
 
     encodeIdentificationField(self, frame, C_IC_NA_1, 1, cot, ca);
 
@@ -1827,7 +2052,8 @@ CS104_Connection_sendInterrogationCommand(CS104_Connection self, CS101_CauseOfTr
 bool
 CS104_Connection_sendCounterInterrogationCommand(CS104_Connection self, CS101_CauseOfTransmission cot, int ca, uint8_t qcc)
 {
-    Frame frame = (Frame) T104Frame_create();
+    //Frame frame = (Frame) T104Frame_create();
+    Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
 
     encodeIdentificationField(self, frame, C_CI_NA_1, 1, cot, ca);
 
@@ -1843,7 +2069,8 @@ CS104_Connection_sendCounterInterrogationCommand(CS104_Connection self, CS101_Ca
 bool
 CS104_Connection_sendReadCommand(CS104_Connection self, int ca, int ioa)
 {
-    Frame frame = (Frame) T104Frame_create();
+    //Frame frame = (Frame) T104Frame_create();
+    Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
 
     encodeIdentificationField(self, frame, C_RD_NA_1, 1, CS101_COT_REQUEST, ca);
 
@@ -1867,7 +2094,8 @@ ASDU 公共地址  2 字节
 bool
 CS104_Connection_sendClockSyncCommand(CS104_Connection self, int ca, CP56Time2a time)
 {
-    Frame frame = (Frame) T104Frame_create();
+    Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
+    //Frame frame = (Frame) T104Frame_create();
 
     encodeIdentificationField(self, frame, C_CS_NA_1, 1, CS101_COT_ACTIVATION, ca);
 
@@ -1881,7 +2109,8 @@ CS104_Connection_sendClockSyncCommand(CS104_Connection self, int ca, CP56Time2a 
 bool //selfdefined
 CS104_Connection_sendClockSyncCommand_SetandRead(CS104_Connection self, int ca, int cot,unsigned char* time)
 {
-    Frame frame = (Frame) T104Frame_create();
+    Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
+    //Frame frame = (Frame) T104Frame_create();
 
     if(cot==5)
         encodeIdentificationField(self, frame, C_CS_NA_1, 1, CS101_COT_REQUEST, ca);//5  CS101_COT_REQUEST
@@ -1902,7 +2131,8 @@ CS104_Connection_sendClockSyncCommand_SetandRead(CS104_Connection self, int ca, 
 bool
 CS104_Connection_sendTestCommand(CS104_Connection self, int ca)
 {
-    Frame frame = (Frame) T104Frame_create();
+    Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
+    //Frame frame = (Frame) T104Frame_create();
 
     encodeIdentificationField(self, frame, C_TS_NA_1, 1, CS101_COT_ACTIVATION, ca);
 
@@ -1928,7 +2158,8 @@ ASDU 公共地址  2 字节
 bool
 CS104_Connection_sendResetprocessCommand(CS104_Connection self, int ca, int qrp)
 {
-    Frame frame = (Frame) T104Frame_create();
+    Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
+    //Frame frame = (Frame) T104Frame_create();
 
     encodeIdentificationField(self, frame, C_TS_NA_1, 1, CS101_COT_ACTIVATION, ca);
 
@@ -1955,7 +2186,8 @@ ASDU 公共地址  2 字节
 bool
 CS104_Connection_sendProcessCommand(CS104_Connection self, TypeID typeId, CS101_CauseOfTransmission cot, int ca, InformationObject sc)
 {
-    Frame frame = (Frame) T104Frame_create();
+    Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
+    //Frame frame = (Frame) T104Frame_create();
 
     encodeIdentificationField (self, frame, typeId, 1 /* SQ:false; NumIX:1 */, cot, ca);
 
@@ -1968,7 +2200,8 @@ CS104_Connection_sendProcessCommand(CS104_Connection self, TypeID typeId, CS101_
 bool
 CS104_Connection_sendParamValueRead(CS104_Connection self, CS101_CauseOfTransmission cot, int vsq,int ca, int sn,InformationObject sc)
 {
-    Frame frame = (Frame) T104Frame_create();
+    Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
+    //Frame frame = (Frame) T104Frame_create();
 
     encodeIdentificationField(self, frame, C_RS_NA_1, vsq, cot, ca);
 
@@ -1985,7 +2218,8 @@ CS104_Connection_sendParamValueRead(CS104_Connection self, CS101_CauseOfTransmis
 bool
 CS104_Connection_sendParamValueWrite(CS104_Connection self, CS101_CauseOfTransmission cot, int vsq,int ca, int sn,int paramti, InformationObject sc)
 {
-    Frame frame = (Frame) T104Frame_create();
+    Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
+    //Frame frame = (Frame) T104Frame_create();
 
     encodeIdentificationField(self, frame, C_WS_NA_1, vsq, cot, ca);
 
@@ -2013,7 +2247,8 @@ CS104_Connection_sendParamValueWrite(CS104_Connection self, CS101_CauseOfTransmi
 bool
 CS104_Connection_sendFileservingCommand(CS104_Connection self, CS101_CauseOfTransmission cot, int ca, InformationObject sc)
 {
-    Frame frame = (Frame) T104Frame_create();
+    Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
+    //Frame frame = (Frame) T104Frame_create();
 
     encodeIdentificationField(self, frame, F_FR_NA_1, 1, cot, ca);
 
@@ -2057,7 +2292,8 @@ bool CS104_Connection_sendSelfdefinedFrame(CS104_Connection self,unsigned char* 
 bool
 CS104_Connection_sendASDU(CS104_Connection self, CS101_ASDU asdu)
 {
-    Frame frame = (Frame) T104Frame_create();
+    Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
+    //Frame frame = (Frame) T104Frame_create();
 
     CS101_ASDU_encode(asdu, frame);
 
@@ -2859,14 +3095,36 @@ typedef struct {
 static int
 sendIMessage_sDEV(CS104_Connection self, uint8_t* buffer, int msgSize)
 {
-    buffer[0] = (uint8_t) 0x68;
-    buffer[1] = (uint8_t) (msgSize - 2);
+//    buffer[0] = (uint8_t) 0x68;
+//    buffer[1] = (uint8_t) (msgSize - 2);
 
-    buffer[2] = (uint8_t) ((self->sendCount % 128) * 2);
-    buffer[3] = (uint8_t) (self->sendCount / 128);
+//    buffer[2] = (uint8_t) ((self->sendCount % 128) * 2);
+//    buffer[3] = (uint8_t) (self->sendCount / 128);
 
-    buffer[4] = (uint8_t) ((self->receiveCount % 128) * 2);
-    buffer[5] = (uint8_t) (self->receiveCount / 128);
+//    buffer[4] = (uint8_t) ((self->receiveCount % 128) * 2);
+//    buffer[5] = (uint8_t) (self->receiveCount / 128);
+
+    int len=0;
+
+    buffer[len++] = (uint8_t) 0x68;
+    //buffer[len++] = (uint8_t) (msgSize - 2);
+    if(self->baseProtocalType == 2)//104+
+    {
+        buffer[len++] = (uint8_t) ((msgSize - 3)%256);
+        buffer[len++] = (uint8_t) ((msgSize - 3)/256);
+    }
+    else
+    {
+        buffer[len++] = (uint8_t) (msgSize - 2);
+    }
+
+    buffer[len++] = (uint8_t) ((self->sendCount % 128) * 2);
+    buffer[len++] = (uint8_t) (self->sendCount / 128);
+
+    buffer[len++] = (uint8_t) ((self->receiveCount % 128) * 2);
+    buffer[len++] = (uint8_t) (self->receiveCount / 128);
+
+
 
     if(self->connectionType == 3)//串口
     {
@@ -3072,6 +3330,8 @@ CS104_Connection_create_sDEV(const char* hostname, int tcpPort)
         self->iMasterConnection.sendACT_CON = _sendACT_CON;
         self->iMasterConnection.sendACT_TERM = _sendACT_TERM;
 
+        self->baseProtocalType = 1;//基本规约类型：1-104   2-104+
+        self->shortframesize = 6;
         prepareSMessage(self->sMessage);
     }
 
@@ -3311,7 +3571,13 @@ handleMessage_sDEV(CS104_Connection self, uint8_t* buffer, int msgSize)
 
     uint64_t currentTime = Hal_getTimeInMs();
 
-    if ((buffer[2] & 1) == 0) {
+    unsigned char apduStartBuf;
+    if(self->baseProtocalType == 2)
+        apduStartBuf = buffer[3];
+    else
+        apduStartBuf = buffer[2];
+
+    if ((apduStartBuf & 1) == 0) {//buffer[2]
 
         if (msgSize < 7) {
             DEBUG_PRINT("Received I msg too small!\n");
@@ -3323,8 +3589,21 @@ handleMessage_sDEV(CS104_Connection self, uint8_t* buffer, int msgSize)
             self->lastConfirmationTime = currentTime; /* start timeout T2 */
         }
 
-        int frameSendSequenceNumber = ((buffer [3] * 0x100) + (buffer [2] & 0xfe)) / 2;
-        int frameRecvSequenceNumber = ((buffer [5] * 0x100) + (buffer [4] & 0xfe)) / 2;
+//        int frameSendSequenceNumber = ((buffer [3] * 0x100) + (buffer [2] & 0xfe)) / 2;
+//        int frameRecvSequenceNumber = ((buffer [5] * 0x100) + (buffer [4] & 0xfe)) / 2;
+        int frameSendSequenceNumber;
+        int frameRecvSequenceNumber;
+        if(self->baseProtocalType == 2)//104+
+        {
+            frameSendSequenceNumber = ((buffer [4] * 0x100) + (buffer [3] & 0xfe)) / 2;
+            frameRecvSequenceNumber = ((buffer [6] * 0x100) + (buffer [5] & 0xfe)) / 2;
+
+        }
+        else
+        {
+            frameSendSequenceNumber = ((buffer [3] * 0x100) + (buffer [2] & 0xfe)) / 2;
+            frameRecvSequenceNumber = ((buffer [5] * 0x100) + (buffer [4] & 0xfe)) / 2;
+        }
 
         DEBUG_PRINT("Received I frame: N(S) = %i N(R) = %i\n", frameSendSequenceNumber, frameRecvSequenceNumber);
 
@@ -3355,19 +3634,31 @@ handleMessage_sDEV(CS104_Connection self, uint8_t* buffer, int msgSize)
     }
 
     /* Check for TESTFR_ACT message */
-    else if ((buffer[2] & 0x43) == 0x43) {
+    else if ((apduStartBuf & 0x43) == 0x43) {//buffer[2]
         DEBUG_PRINT("Send TESTFR_CON\n");
 
         if(self->connectionType == 3)//串口
         {
-            SerialPort_write(self->commPort, TESTFR_CON_MSG, 0, TESTFR_CON_MSG_SIZE);
+            if(self->baseProtocalType == 2)
+            {
+                SerialPort_write(self->commPort, TESTFR_CON_MSG_104P, 0, TESTFR_CON_MSG_SIZE_104P);
+            }
+            else
+                SerialPort_write(self->commPort, TESTFR_CON_MSG, 0, TESTFR_CON_MSG_SIZE);
         }
         else
-            writeToSocket(self, TESTFR_CON_MSG, TESTFR_CON_MSG_SIZE);
+        {
+            if(self->baseProtocalType == 2)
+            {
+                writeToSocket(self, TESTFR_CON_MSG_104P, TESTFR_CON_MSG_SIZE_104P);
+            }
+            else
+                writeToSocket(self, TESTFR_CON_MSG, TESTFR_CON_MSG_SIZE);
+        }
     }
 
     /* Check for STARTDT_ACT message */
-    else if ((buffer [2] & 0x07) == 0x07) {
+    else if ((apduStartBuf & 0x07) == 0x07) {//buffer [2]
         DEBUG_PRINT("Send STARTDT_CON\n");
         self->isActive = true;
         self->receiveCount = 0;//clear seqnum
@@ -3376,36 +3667,69 @@ handleMessage_sDEV(CS104_Connection self, uint8_t* buffer, int msgSize)
 
         if(self->connectionType == 3)//串口
         {
-            SerialPort_write(self->commPort, STARTDT_CON_MSG, 0, STARTDT_CON_MSG_SIZE);
+            if(self->baseProtocalType == 2)
+            {
+                SerialPort_write(self->commPort, STARTDT_CON_MSG_104P, 0, STARTDT_CON_MSG_SIZE_104P);
+            }
+            else
+                SerialPort_write(self->commPort, STARTDT_CON_MSG, 0, STARTDT_CON_MSG_SIZE);
         }
         else
-            writeToSocket(self, STARTDT_CON_MSG, STARTDT_CON_MSG_SIZE);
+        {
+            if(self->baseProtocalType == 2)
+            {
+                writeToSocket(self, STARTDT_CON_MSG_104P, STARTDT_CON_MSG_SIZE_104P);
+            }
+            else
+                writeToSocket(self, STARTDT_CON_MSG, STARTDT_CON_MSG_SIZE);
+        }
     }
 
     /* Check for STOPDT_ACT message */
-    else if ((buffer [2] & 0x13) == 0x13) {
+    else if ((apduStartBuf & 0x13) == 0x13) {//buffer [2]
         DEBUG_PRINT("Send STOPDT_CON\n");
 
         self->isActive = false;
 
         if(self->connectionType == 3)//串口
         {
-            SerialPort_write(self->commPort, STOPDT_CON_MSG, 0, STOPDT_CON_MSG_SIZE);
+            if(self->baseProtocalType == 2)
+            {
+                SerialPort_write(self->commPort, STOPDT_CON_MSG_104P, 0, STOPDT_CON_MSG_SIZE_104P);
+            }
+            else
+                SerialPort_write(self->commPort, STOPDT_CON_MSG, 0, STOPDT_CON_MSG_SIZE);
         }
         else
-            writeToSocket(self, STOPDT_CON_MSG, STOPDT_CON_MSG_SIZE);
+        {
+            if(self->baseProtocalType == 2)
+            {
+                writeToSocket(self, STOPDT_CON_MSG_104P, STOPDT_CON_MSG_SIZE_104P);
+            }
+            else
+                writeToSocket(self, STOPDT_CON_MSG, STOPDT_CON_MSG_SIZE);
+        }
     }
 
     /* Check for TESTFR_CON message */
-    else if ((buffer[2] & 0x83) == 0x83) {
+    else if ((apduStartBuf & 0x83) == 0x83) {//buffer[2]
         DEBUG_PRINT("Recv TESTFR_CON\n");
 
         //self->outstandingTestFRConMessages = 0;
         self->outstandingTestFCConMessages = 0;
     }
 
-    else if (buffer [2] == 0x01) { /* S-message */
-        int seqNo = (buffer[4] + buffer[5] * 0x100) / 2;
+    else if (apduStartBuf == 0x01) {//buffer [2] /* S-message */
+        //int seqNo = (buffer[4] + buffer[5] * 0x100) / 2;
+        int seqNo;
+        if(self->baseProtocalType == 2)//104+
+        {
+            seqNo = (buffer[5] + buffer[6] * 0x100) / 2;
+        }
+        else
+        {
+           seqNo = (buffer[4] + buffer[5] * 0x100) / 2;
+        }
 
         DEBUG_PRINT("Rcvd S(%i) (own sendcounter = %i)\n", seqNo, self->sendCount);
 
@@ -3447,10 +3771,22 @@ handleTimeouts_sDEV(CS104_Connection self)
             //\n 长期空闲状态下发送测试帧的超时(设备端主动发出)
             if(self->connectionType == 3)//串口
             {
-                SerialPort_write(self->commPort, TESTFR_ACT_MSG, 0, TESTFR_ACT_MSG_SIZE);
+                if(self->baseProtocalType == 2)
+                {
+                    SerialPort_write(self->commPort, TESTFR_ACT_MSG_104P, 0, TESTFR_ACT_MSG_SIZE_104P);
+                }
+                else
+                    SerialPort_write(self->commPort, TESTFR_ACT_MSG, 0, TESTFR_ACT_MSG_SIZE);
             }
             else
-                writeToSocket(self, TESTFR_ACT_MSG, TESTFR_ACT_MSG_SIZE);
+            {
+                if(self->baseProtocalType == 2)
+                {
+                    writeToSocket(self, TESTFR_ACT_MSG_104P, TESTFR_ACT_MSG_SIZE_104P);
+                }
+                else
+                    writeToSocket(self, TESTFR_ACT_MSG, TESTFR_ACT_MSG_SIZE);
+            }
 
             self->uMessageTimeout = currentTime + (self->parameters.t1 * 1000);
             self->outstandingTestFCConMessages++;

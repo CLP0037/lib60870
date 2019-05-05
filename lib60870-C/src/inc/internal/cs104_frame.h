@@ -31,6 +31,9 @@ typedef struct sT104Frame* T104Frame;
 T104Frame
 T104Frame_create(void);
 
+T104Frame
+T104Frame_create_104P(int msgsize_base);
+
 void
 T104Frame_destroy(Frame self);
 
@@ -39,6 +42,9 @@ T104Frame_resetFrame(Frame self);
 
 void
 T104Frame_prepareToSend(T104Frame self, int sendCounter, int receiveCounter);
+
+void
+T104Frame_prepareToSend_104P(T104Frame self, int sendCounter, int receiveCounter,int baseProtocalType);
 
 void
 T104Frame_setNextByte(Frame self, uint8_t byte);

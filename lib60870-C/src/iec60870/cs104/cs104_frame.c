@@ -122,6 +122,38 @@ T104Frame_create()
         self->virtualFunctionTable = &t104FrameVFT;
         self->buffer[0] = 0x68;
         self->msgSize = 6;
+
+    }
+#endif
+
+    return self;
+}
+
+T104Frame
+T104Frame_create_104P(int msgsize_base)
+{
+#if (CONFIG_LIB60870_STATIC_FRAMES == 1)
+
+    if (staticFramesInitialized == 0) {
+        initializeFrames();
+        staticFramesInitialized = 1;
+    }
+
+    T104Frame self = getNextFreeFrame();
+
+#else
+    T104Frame self = (T104Frame) GLOBAL_MALLOC(sizeof(struct sT104Frame));
+
+    if (self != NULL) {
+
+        int i;
+        for (i = 0; i < 256; i++)
+            self->buffer[i] = 0;
+
+        self->virtualFunctionTable = &t104FrameVFT;
+        self->buffer[0] = 0x68;
+        self->msgSize = msgsize_base;//6
+
     }
 #endif
 
@@ -160,6 +192,31 @@ T104Frame_prepareToSend(T104Frame self, int sendCounter, int receiveCounter)
 
     buffer[4] = (uint8_t) ((receiveCounter % 128) * 2);
     buffer[5] = (uint8_t) (receiveCounter / 128);
+}
+
+void
+T104Frame_prepareToSend_104P(T104Frame self, int sendCounter, int receiveCounter,int baseProtocalType)
+{
+    int len=1;
+
+    uint8_t* buffer = self->buffer;
+
+    if(baseProtocalType == 2)
+    {
+        buffer[len++] = (uint8_t) ((self->msgSize - 3)%256);//低位在前
+        buffer[len++] = (uint8_t) ((self->msgSize - 3)/256);
+    }
+    else
+    {
+        buffer[len++] = (uint8_t) (self->msgSize - 2);
+    }
+
+
+    buffer[len++] = (uint8_t) ((sendCounter % 128) * 2);
+    buffer[len++] = (uint8_t) (sendCounter / 128);
+
+    buffer[len++] = (uint8_t) ((receiveCounter % 128) * 2);
+    buffer[len++] = (uint8_t) (receiveCounter / 128);
 }
 
 void

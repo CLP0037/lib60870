@@ -101,6 +101,12 @@ CS104_Connection_create_mStation(CS104_Connection_mStation slave, Socket socket)
 CS104_Connection
 CS104_Connection_createSecure(const char* hostname, int tcpPort, TLSConfiguration tlsConfig);
 
+void
+CS104_Connection_setProtocalType(CS104_Connection self, unsigned char baseProtocalType);
+
+unsigned char
+CS104_Connection_getProtocalType(CS104_Connection self);
+
 /**
  * \brief Set the CS104 specific APCI parameters.
  *
