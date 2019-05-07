@@ -606,6 +606,21 @@ struct sCS104_Slave {
     CS104_ConnectionRequestHandler connectionRequestHandler;
     void* connectionRequestHandlerParameter;
 
+    //============= add for 104 monitor =============//
+    CS104_MSGRecvHandler msgrecvHandler;
+    void* msgrecvHandlerParameter;
+
+    CS104_MSGSendHandler msgsendHandler;
+    void* msgsendHandlerParameter;
+
+    CS104_ConnectionBrokenHandler connectionBrokenHandler;
+    void* connectionBrokenHandlerParameter;
+
+
+
+    //============= add for 104 monitor =============//
+
+
 #if (CONFIG_CS104_SUPPORT_TLS == 1)
     TLSConfiguration tlsConfig;
 #endif
@@ -723,6 +738,14 @@ createSlave(int maxLowPrioQueueSize, int maxHighPrioQueueSize)
         self->delayAcquisitionHandler = NULL;
         self->connectionRequestHandler = NULL;
 
+        //
+        self->msgrecvHandler = NULL;
+        //void* msgrecvHandlerParameter;
+        self->msgsendHandler = NULL;
+        //void* msgsendHandlerParameter;
+        self->connectionBrokenHandler = NULL;
+        //void* connectionBrokenHandlerParameter;
+
 #if (CONFIG_CS104_SUPPORT_SERVER_MODE_SINGLE_REDUNDANCY_GROUP == 1)
         self->maxLowPrioQueueSize = maxLowPrioQueueSize;
         self->maxHighPrioQueueSize = maxHighPrioQueueSize;
@@ -837,6 +860,27 @@ CS104_Slave_setConnectionRequestHandler(CS104_Slave self, CS104_ConnectionReques
 {
     self->connectionRequestHandler = handler;
     self->connectionRequestHandlerParameter = parameter;
+}
+
+void
+CS104_Slave_setMsgrecvHandler(CS104_Slave self, CS104_MSGRecvHandler handler, void* parameter)
+{
+    self->msgrecvHandler = handler;
+    self->msgrecvHandlerParameter = parameter;
+}
+
+void
+CS104_Slave_setMsgsendHandler(CS104_Slave self, CS104_MSGSendHandler handler, void* parameter)
+{
+    self->msgsendHandler = handler;
+    self->msgsendHandlerParameter = parameter;
+}
+
+void
+CS104_Slave_setConnectionBrokenHandler(CS104_Slave self, CS104_ConnectionBrokenHandler handler, void* parameter)
+{
+    self->connectionBrokenHandler = handler;
+    self->connectionBrokenHandlerParameter = parameter;
 }
 
 /**
@@ -1065,6 +1109,13 @@ receiveMessage(MasterConnection self, uint8_t* buffer)
 static inline int
 writeToSocket(MasterConnection self, uint8_t* buf, int size)
 {
+    if(self->slave->msgsendHandler != NULL)
+    {
+        char ipAddress[60];
+        Socket_getPeerAddressStatic(self->socket, ipAddress);
+        self->slave->msgsendHandler(self->slave->msgsendHandlerParameter,buf,size,ipAddress);
+    }
+
 #if (CONFIG_CS104_SUPPORT_TLS == 1)
     if (self->tlsSocket)
         return TLSSocket_write(self->tlsSocket, buf, size);
@@ -1535,7 +1586,7 @@ handleMessage(MasterConnection self, uint8_t* buffer, int msgSize)
     else if ((buffer [2] & 0x07) == 0x07) {
         DEBUG_PRINT("Send STARTDT_CON\n");
 
-        CS104_Slave_activate(self->slave, self);
+        //CS104_Slave_activate(self->slave, self);//激活最新的连接为active状态
 
         self->isActive = true;
 
@@ -1825,6 +1876,13 @@ connectionHandlingThread(void* parameter)
             if (bytesRec > 0) {
                 DEBUG_PRINT("Connection: rcvd msg(%i bytes)\n", bytesRec);
 
+                if(self->slave->msgrecvHandler != NULL)
+                {
+                    char ipAddress[60];
+                    Socket_getPeerAddressStatic(self->socket, ipAddress);
+                    self->slave->msgrecvHandler(self->slave->msgrecvHandlerParameter,buffer,bytesRec,ipAddress);
+                }
+
                 if (handleMessage(self, buffer, bytesRec) == false)
                     self->isRunning = false;
 
@@ -1859,6 +1917,13 @@ connectionHandlingThread(void* parameter)
         HighPriorityASDUQueue_destroy(self->highPrioQueue);
     }
 #endif
+
+    if(self->slave->connectionBrokenHandler != NULL)
+    {
+        char ipAddress[60];
+        Socket_getPeerAddressStatic(self->socket, ipAddress);
+        self->slave->connectionBrokenHandler(self->slave->connectionBrokenHandlerParameter,ipAddress);
+    }
 
     CS104_Slave_removeConnection(self->slave, self);
 
@@ -2021,15 +2086,36 @@ serverThread (void* parameter)
                     acceptConnection = false;
             }
 
+            char ipAddress[60];
+            int port_new;
             if (acceptConnection && (self->connectionRequestHandler != NULL)) {
-                char ipAddress[60];
+//                char ipAddress[60];
 
                 Socket_getPeerAddressStatic(newSocket, ipAddress);
 
-                /* remove TCP port part */
-                char* separator = strchr(ipAddress, ':');
-                if (separator != NULL)
-                    *separator = 0;
+//                //get ip and port info of the new connection
+//                char* p1;
+//                char* p2;
+
+//                p1 = strtok(ipAddress, ":");
+//                if(p1)
+//                {
+//                    strcpy(ipAddress, p1);
+//                    p2 = strtok(NULL, ":");
+//                    if(p2)
+//                        port_new = atoi(p2);
+//                }
+//                else
+//                {
+//                    port_new = 2404;//2404
+
+//                }
+//                DEBUG_PRINT("new Connection of ipAddress = %s;p1 = %s;p2 = %s!;port = %d\n",ipAddress,p1,p2,port_new);
+
+//                /* remove TCP port part */
+//                char* separator = strchr(ipAddress, ':');
+//                if (separator != NULL)
+//                    *separator = 0;
 
                 acceptConnection = self->connectionRequestHandler(self->connectionRequestHandlerParameter,
                         ipAddress);
