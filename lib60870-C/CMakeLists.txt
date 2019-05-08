@@ -20,8 +20,8 @@ endif()
 #project name，指定项目的名称，一般和项目的文件夹名称对应
 project(lib60870-C)
 ENABLE_TESTING()
-#设置基本tag（版本信息）：2.0.0
-set(LIB_VERSION_MAJOR "2")
+#设置基本tag（版本信息）：1.0.0
+set(LIB_VERSION_MAJOR "1")
 set(LIB_VERSION_MINOR "0")
 set(LIB_VERSION_PATCH "0")
 
@@ -33,11 +33,25 @@ set(LIB_VERSION_PATCH "0")
 set(QTD "$ENV{QTDIR}")
 MESSAGE( STATUS "QTDIR:         " ${QTD} )
 
+
 IF (WIN32)      #qDebug in windows, not in Linux as gcc does not work with C including c++ header
 #5.2.1  QTDIR：D:\Qt\Qt5.2.1
 #set(CMAKE_PREFIX_PATH $ENV{QTDIR}/5.2.1/msvc2010/lib/cmake/Qt5Core)
 #5.9.7  QTDIR：C:\Qt\Qt5.9.7\5.9.7\msvc2017_64
-set(CMAKE_PREFIX_PATH $ENV{QTDIR}/lib/cmake/Qt5Core)
+#set(CMAKE_PREFIX_PATH $ENV{QTDIR}/lib/cmake/Qt5Core)
+
+#string(COMPARE GREATER <string1> <string2> <output variable>)
+if(QTD MATCHES "5.2.1")
+    MESSAGE("QT version 5.2.1")
+    set(CMAKE_PREFIX_PATH $ENV{QTDIR}/5.2.1/msvc2010/lib/cmake/Qt5Core)
+elseif(QTD MATCHES "5.9.")
+    MESSAGE("QT version 5.9.*")
+    set(CMAKE_PREFIX_PATH $ENV{QTDIR}/lib/cmake/Qt5Core)
+elseif(QTD MATCHES "5.12.")
+    MESSAGE("QT version 5.12.*")
+    set(CMAKE_PREFIX_PATH $ENV{QTDIR}/lib/cmake/Qt5Core)
+endif()
+
 include_directories(
     ${CMAKE_CURRENT_LIST_DIR}/src/inc/vs  #stdbool.h
     ${QTD}/include/QtCore
