@@ -111,6 +111,7 @@ struct sCS104_Connection {
 
     int unconfirmedReceivedIMessages;
     uint64_t lastConfirmationTime;
+    int unconfirmedSendIMessages;//记录设备I帧未确认帧数
 
     uint64_t nextT3Timeout;
     int outstandingTestFCConMessages;
@@ -411,6 +412,7 @@ sendSMessage(CS104_Connection self)
 static int
 sendIMessage(CS104_Connection self, Frame frame)
 {
+    self->unconfirmedSendIMessages ++;
     //T104Frame_prepareToSend((T104Frame) frame, self->sendCount, self->receiveCount);
     T104Frame_prepareToSend_104P((T104Frame) frame, self->sendCount, self->receiveCount, self->baseProtocalType);
 
@@ -670,7 +672,7 @@ resetConnection(CS104_Connection self)
 
     self->receiveCount = 0;
     self->sendCount = 0;
-
+    self->unconfirmedSendIMessages = 0;//
     self->unconfirmedReceivedIMessages = 0;
     self->lastConfirmationTime = 0xffffffffffffffff;
     self->firstIMessageReceived = false;
@@ -880,6 +882,16 @@ CS104_Connection_getProtocalType(CS104_Connection self)
         return self->baseProtocalType;
     }
     return 0;
+}
+
+int
+CS104_Connection_getunconfirmedSendIMessages(CS104_Connection self)
+{
+    if(self)
+    {
+        return self->unconfirmedSendIMessages;
+    }
+    return -1;
 }
 
 void
@@ -1210,6 +1222,7 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
             self->receiveCount = 0;//clear seqnum
             self->sendCount = 0;
             self->unconfirmedReceivedIMessages = 0;
+            self->unconfirmedSendIMessages = 0;
             if(self->connectionType == 3)//串口
             {
                 if(self->baseProtocalType == 2)
@@ -1241,6 +1254,7 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
             self->receiveCount = 0;//clear seqnum
             self->sendCount = 0;
             self->unconfirmedReceivedIMessages = 0;
+            self->unconfirmedSendIMessages = 0;
 //            if (self->importantInfoHandler != NULL)
 //                self->importantInfoHandler(self->importantInfoHandlerParameter, "Received STARTDT_CON(68040b000000)!");//
             if (self->connectionHandler != NULL)
@@ -1278,6 +1292,7 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
 
         //DEBUG_PRINT("Rcvd S(%i) (own sendcounter = %i)\n", seqNo, self->sendCount);
         //qDebug()<<"DEBUG_LIB60870: "<<"Rcvd S("<<seqNo<<") (own sendcounter = "<<self->sendCount<<")";
+        self->unconfirmedSendIMessages = 0;//收到S帧，I帧未回复帧计数清零
 
         if (checkSequenceNumber(self, seqNo) == false)
         {

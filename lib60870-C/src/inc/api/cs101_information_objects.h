@@ -1946,7 +1946,7 @@ FileActivate FileActivate_create(FileActivate self, int ioa, uint8_t operateType
 void FileActivate_destroy(FileActivate self);
 
 
-typedef struct  sFileActivateAffirm* FileActivateAffirm;//读文件激活
+typedef struct  sFileActivateAffirm* FileActivateAffirm;//读文件激活确认
 int FileActivateAffirm_getOperateType(FileActivateAffirm self);
 int FileActivateAffirm_getResultDescribe(FileActivateAffirm self);
 int FileActivateAffirm_getFilenamelen(FileActivateAffirm self);
@@ -1955,7 +1955,7 @@ int FileActivateAffirm_getFileID(FileActivateAffirm self);
 int FileActivateAffirm_getFilesize(FileActivateAffirm self);
 void FileActivateAffirm_destroy(FileActivateAffirm self);
 
-typedef struct  sFileTransfer* FileTransfer;//读文件数据传输确认
+typedef struct  sFileTransfer* FileTransfer;//读文件数据传输
 
 int FileTransfer_getOperateType(FileTransfer self);
 int FileTransfer_getCurrentfiledataLen(FileTransfer self);
@@ -1971,12 +1971,32 @@ FileTransferAffirm FileTransferAffirm_create(FileTransferAffirm self, int ioa, u
 void FileTransferAffirm_destroy(FileTransferAffirm self);
 
 
+//Write
+typedef struct  sFileActivateWrite* FileActivateWrite;//写文件激活
+FileActivateWrite FileActivateWrite_create(FileActivateWrite self, int ioa, uint8_t operateType, uint8_t fileNamelength, char* fileName,uint32_t fileID, uint32_t fileSize);
+void FileActivateWrite_destroy(FileActivateWrite self);
 
+typedef struct  sFileActivateAffirmWrite* FileActivateAffirmWrite;//写文件激活确认(接收)
+int FileActivateAffirmWrite_getOperateType(FileActivateAffirmWrite self);
+int FileActivateAffirmWrite_getResultDescribe(FileActivateAffirmWrite self);
+int FileActivateAffirmWrite_getFilenamelen(FileActivateAffirmWrite self);
+char* FileActivateAffirmWrite_getFilename(FileActivateAffirmWrite self);
+unsigned int FileActivateAffirmWrite_getFileID(FileActivateAffirmWrite self);
+unsigned int FileActivateAffirmWrite_getFilesize(FileActivateAffirmWrite self);
+void FileActivateAffirmWrite_destroy(FileActivateAffirmWrite self);
 
+typedef struct  sFileTransferWrite* FileTransferWrite;//写文件数据传输
+FileTransferWrite FileTransferWrite_create(FileTransferWrite self, int ioa, uint8_t operateType, uint32_t fileID, uint32_t segmentnumber, uint8_t followupFlag,char* fileData,uint8_t fileCheckSum);
+void FileTransferWrite_destroy(FileTransferWrite self);
 
+typedef struct  sFileTransferAffirmWrite* FileTransferAffirmWrite;//写文件数据传输确认(接收)
+//FileTransferAffirmWrite FileTransferAffirmWrite_create(FileTransferAffirmWrite self, int ioa, uint8_t operateType, uint32_t fileID, uint32_t segmentnumber, uint8_t resultDescribe);
+int FileTransferAffirmWrite_getOperateType(FileTransferAffirmWrite self);
+unsigned char FileTransferAffirmWrite_getResultDescribe(FileTransferAffirmWrite self);
+unsigned int FileTransferAffirmWrite_getFileID(FileTransferAffirmWrite self);
+unsigned int FileTransferAffirmWrite_getFilesegmentnumber(FileTransferAffirmWrite self);
 
-
-
+void FileTransferAffirmWrite_destroy(FileTransferAffirmWrite self);
 
 //========== <210>	：文件服务 ==========//
 

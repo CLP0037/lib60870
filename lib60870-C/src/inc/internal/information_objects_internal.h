@@ -335,6 +335,14 @@ FileTransfer
 FileTransfer_getFromBuffer(FileTransfer self, CS101_AppLayerParameters parameters,
                                  uint8_t* msg, int msgSize, int startIndex, bool isSequence);
 
+//写文件激活确认
+FileActivateAffirmWrite
+FileActivateAffirmWrite_getFromBuffer(FileActivateAffirmWrite self, CS101_AppLayerParameters parameters,
+                                 uint8_t* msg, int msgSize, int startIndex, bool isSequence);
+//写文件数据传输确认
+FileTransferAffirmWrite
+FileTransferAffirmWrite_getFromBuffer(FileTransferAffirmWrite self, CS101_AppLayerParameters parameters,
+                                 uint8_t* msg, int msgSize, int startIndex, bool isSequence);
 /********************************************
  * static InformationObject type definitions
  ********************************************/
@@ -1319,9 +1327,9 @@ struct sFileActivate{//读文件激活
 
     InformationObjectVFT virtualFunctionTable;
 
-    uint8_t operateType;           //1字节:操作标识  3：读文件激活
+    uint8_t operateType;           //1字节:操作标识  3：读文件激活   7：写文件激活
     uint8_t fileNamelength;        //1字节：文件长度
-    char* fileName;             //x字节：文件名
+    char* fileName;                //x字节：文件名
 };
 
 struct sFileTransferAffirm{//读文件传输确认
@@ -1337,6 +1345,66 @@ struct sFileTransferAffirm{//读文件传输确认
     uint32_t segmentnumber;        //4字节：数据段号,可以使用文件内容的偏移指针值
     uint8_t followupFlag;          //1字节:后续标志,0：无后续,1：有后续
 
+};
+
+struct sFileActivateWrite{//写文件激活
+    int objectAddress;
+
+    TypeID type;
+
+    InformationObjectVFT virtualFunctionTable;
+
+    uint8_t operateType;           //1字节:操作标识  7：写文件激活
+    uint8_t fileNamelength;        //1字节：文件长度
+    char* fileName;                //x字节：文件名
+    uint32_t fileID;               //4字节：文件ID
+    uint32_t fileSize;             //4字节：文件大小
+};
+
+struct sFileActivateAffirmWrite{//写文件激活确认
+    int objectAddress;
+
+    TypeID type;
+
+    InformationObjectVFT virtualFunctionTable;
+
+    uint8_t operateType;           //1字节:操作标识  8：写文件激活确认
+    uint8_t resultDescribe;        //1字节:结果描述字 0：成功 1：未知错误 2. 文件名不支持 3：长度超范围
+    uint8_t fileNamelength;          //1字节：文件名长度
+    char* fileName;                //x字节：文件名
+    uint32_t fileID;               //4字节：文件ID
+    uint32_t fileSize;             //4字节：文件大小
+};
+
+struct sFileTransferWrite{//写文件传输
+    int objectAddress;
+
+    TypeID type;
+
+    InformationObjectVFT virtualFunctionTable;
+
+    uint8_t operateType;           //1字节:操作标识  9：写文件数据
+    uint32_t fileID;               //4字节：文件ID
+    uint32_t segmentnumber;        //4字节：数据段号,可以使用文件内容的偏移指针值
+    uint8_t followupFlag;          //1字节:后续标志,0：无后续,1：有后续
+    char* fileData;                //x字节：文件数据
+    //char fileData[256];
+    //uint8_t file_currentlen;       //当前段长度
+    uint8_t fileCheckSum;          //1字节:校验码(校验范围：文件数据 校验算法：单字节模和运算)
+};
+
+struct sFileTransferAffirmWrite{//写文件传输确认
+
+    int objectAddress;
+
+    TypeID type;
+
+    InformationObjectVFT virtualFunctionTable;
+
+    uint8_t operateType;           //1字节:操作标识  6：读文件数据响应
+    uint32_t fileID;               //4字节：文件ID
+    uint32_t segmentnumber;        //4字节：数据段号,可以使用文件内容的偏移指针值
+    uint8_t resultDescribe;        //1字节:结果描述字,0：成功 1：未知错误 2.校验和错误 3.文件长度不对应 4.文件ID与激活ID不一致
 };
 
 struct sMenu{//目录

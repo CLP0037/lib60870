@@ -107,6 +107,9 @@ CS104_Connection_setProtocalType(CS104_Connection self, unsigned char baseProtoc
 unsigned char
 CS104_Connection_getProtocalType(CS104_Connection self);
 
+int
+CS104_Connection_getunconfirmedSendIMessages(CS104_Connection self);
+
 /**
  * \brief Set the CS104 specific APCI parameters.
  *

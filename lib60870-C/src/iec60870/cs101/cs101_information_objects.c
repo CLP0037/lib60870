@@ -8857,4 +8857,446 @@ void FileTransferAffirm_destroy(FileTransferAffirm self)
 }
 
 
+/*************************************************
+ * FileActivateWrite : InformationObject 写文件激活
+ *************************************************/
+static bool
+FileActivateWrite_encode(FileActivateWrite self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+
+    Frame_setNextByte (frame, 2);//附加数据包类型 1-备用  2-文件传输  3-备用  4-备用
+
+//    uint8_t operateType;           //1字节:操作标识  3：读文件激活
+//    uint8_t fileNamelength;        //1字节：文件长度
+//    char* fileName;             //x字节：文件名
+//    uint32_t fileID;               //4字节：文件ID
+//    uint32_t fileSize;             //4字节：文件大小
+
+    Frame_setNextByte (frame, self->operateType);
+
+    Frame_setNextByte (frame, self->fileNamelength);
+
+    for(int i=0;i<self->fileNamelength;i++)
+    {
+       Frame_setNextByte (frame, (uint8_t)(self->fileName[i]));
+    }
+
+    Frame_setNextByte (frame, (uint8_t)(self->fileID % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x1000000) % 0x100));
+
+    Frame_setNextByte (frame, (uint8_t)(self->fileSize % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileSize / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileSize / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileSize / 0x1000000) % 0x100));
+
+    return true;
+}
+
+struct sInformationObjectVFT FileActivateWriteVFT = {
+        (EncodeFunction) FileActivateWrite_encode,
+        (DestroyFunction) FileActivateWrite_destroy
+};
+
+static void
+FileActivateWrite_initialize(FileActivateWrite self)
+{
+    self->virtualFunctionTable = &(FileActivateWriteVFT);
+    self->type = F_FR_NA_1;
+}
+
+//FileActivateWrite FileActivateWrite_create(FileActivateWrite self, int ioa, uint8_t operateType, uint8_t fileNamelength, char* fileName,uint32_t fileID, uint32_t fileSize);
+FileActivateWrite FileActivateWrite_create(FileActivateWrite self, int ioa, uint8_t operateType, uint8_t fileNamelength, char* fileName,uint32_t fileID, uint32_t fileSize)
+{
+    if (self == NULL)
+        self = (FileActivateWrite) GLOBAL_MALLOC(sizeof(struct sFileActivateWrite));
+
+    if (self != NULL) {
+        FileActivateWrite_initialize(self);
+
+        self->objectAddress = ioa;
+        self->operateType = operateType;
+
+        self->fileNamelength = fileNamelength;
+        self->fileName = fileName;
+        self->fileID = fileID;
+        self->fileSize = fileSize;
+    }
+
+    return self;
+}
+
+void FileActivateWrite_destroy(FileActivateWrite self)
+{
+    if (self != NULL)
+        GLOBAL_FREEMEM(self);
+}
+
+
+/*************************************************
+ * FileActivateAffirmWrite : InformationObject 写文件激活确认
+ *************************************************/
+//FileActivateAffirmWrite
+static bool
+FileActivateAffirmWrite_encode(FileActivateAffirmWrite self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+
+    Frame_setNextByte (frame, 2);//附加数据包类型 1-备用  2-文件传输  3-备用  4-备用
+
+//    uint8_t operateType;           //1字节:操作标识  4：读文件激活确认
+//    uint8_t resultDescribe;        //1字节:结果描述字 0-成功 1-失败
+//    uint8_t fileNamelength;        //1字节：文件长度
+//    char* fileName;             //x字节：文件名
+//    uint32_t fileID;               //4字节：文件ID
+//    uint32_t fileSize;             //4字节：文件大小
+    Frame_setNextByte (frame, self->operateType);//4：读文件激活确认
+
+    Frame_setNextByte (frame, self->resultDescribe);
+
+    Frame_setNextByte (frame, self->fileNamelength);
+    Frame_appendBytes(frame, (uint8_t*)(&(self->fileName)), self->fileNamelength);
+
+    Frame_setNextByte (frame, (uint8_t)(self->fileID % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x1000000) % 0x100));
+
+    Frame_setNextByte (frame, (uint8_t)(self->fileSize % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileSize / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileSize / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileSize / 0x1000000) % 0x100));
+
+
+
+    return true;
+}
+
+struct sInformationObjectVFT FileActivateAffirmWriteVFT = {
+        (EncodeFunction) FileActivateAffirmWrite_encode,
+        (DestroyFunction) FileActivateAffirmWrite_destroy
+};
+
+static void
+FileActivateAffirmWrite_initialize(FileActivateAffirmWrite self)
+{
+    self->virtualFunctionTable = &(FileActivateAffirmWriteVFT);
+    self->type = F_FR_NA_1;
+}
+
+
+FileActivateAffirmWrite
+FileActivateAffirmWrite_getFromBuffer(FileActivateAffirmWrite self, CS101_AppLayerParameters parameters,
+                                 uint8_t* msg, int msgSize, int startIndex, bool isSequence)
+{
+    if (self == NULL)
+       self = (FileActivateAffirmWrite) GLOBAL_MALLOC(sizeof(struct sFileActivateAffirmWrite));
+
+    if (self != NULL) {
+
+        FileActivateAffirmWrite_initialize(self);
+
+        if (!isSequence) {
+            InformationObject_getFromBuffer((InformationObject) self, parameters, msg, startIndex);
+
+            startIndex += parameters->sizeOfIOA; /* skip IOA */
+        }
+        startIndex++;//附加数据包类型 2：文件传输；
+        //    uint8_t operateType;           //1字节:操作标识  8：写文件激活确认
+        //    uint8_t resultDescribe;        //1字节:结果描述字 0：成功 1：未知错误 2. 文件名不支持 3：长度超范围
+        //    uint8_t fileNamelength;        //1字节：文件长度
+        //    char* fileName;                //x字节：文件名
+        //    uint32_t fileID;               //4字节：文件ID
+        //    uint32_t fileSize;             //4字节：文件大小
+        //操作标识   8：写文件激活确认
+        self->operateType = msg[startIndex++];
+        //结果描述字
+        self->resultDescribe = msg[startIndex++];
+        //文件名长度
+        self->fileNamelength = msg [startIndex++];
+        //文件名称
+        for(int len=0;len<256;len++)
+        {
+            if(len<self->fileNamelength)
+                self->fileName[len]=msg [startIndex++];
+            else
+                self->fileName[len]='\0';
+        }
+        //文件ID
+        self->fileID = msg [startIndex++];
+        self->fileID += (msg [startIndex++] * 0x100);
+        self->fileID += (msg [startIndex++] * 0x10000);
+        self->fileID += (msg [startIndex++] * 0x1000000);
+        //文件大小
+        self->fileSize = msg [startIndex++];
+        self->fileSize += (msg [startIndex++] * 0x100);
+        self->fileSize += (msg [startIndex++] * 0x10000);
+        self->fileSize += (msg [startIndex++] * 0x1000000);
+
+    }
+
+
+
+    return self;
+}
+
+int
+FileActivateAffirmWrite_getOperateType(FileActivateAffirmWrite self)
+{
+    return self->operateType;
+}
+
+int
+FileActivateAffirmWrite_getResultDescribe(FileActivateAffirmWrite self)
+{
+    return self->resultDescribe;
+}
+
+int
+FileActivateAffirmWrite_getFilenamelen(FileActivateAffirmWrite self)
+{
+    return self->fileNamelength;
+}
+
+char* FileActivateAffirmWrite_getFilename(FileActivateAffirmWrite self)
+{
+    return (char*)(self->fileName);
+}
+
+unsigned int
+FileActivateAffirmWrite_getFileID(FileActivateAffirmWrite self)
+{
+    return self->fileID;
+}
+
+unsigned int
+FileActivateAffirmWrite_getFilesize(FileActivateAffirmWrite self)
+{
+    return self->fileSize;
+}
+
+void FileActivateAffirmWrite_destroy(FileActivateAffirmWrite self)
+{
+    if (self != NULL)
+        GLOBAL_FREEMEM(self);
+}
+
+
+/*************************************************
+ * FileTransferWrite : InformationObject 写文件数据传输
+ *************************************************/
+//FileTransfer
+static bool
+FileTransferWrite_encode(FileTransferWrite self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+
+    Frame_setNextByte (frame, 2);//附加数据包类型 1-备用  2-文件传输  3-备用  4-备用
+
+    Frame_setNextByte (frame, self->operateType);
+
+    Frame_setNextByte (frame, (uint8_t)(self->fileID % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x1000000) % 0x100));
+
+    Frame_setNextByte (frame, (uint8_t)(self->segmentnumber % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->segmentnumber / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->segmentnumber / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->segmentnumber / 0x1000000) % 0x100));
+
+    Frame_setNextByte (frame, self->followupFlag);
+
+    //fileData
+    for(int len=0;len<256;len++)
+    {
+        if(self->fileData[len]!='\0'&&Frame_getMsgSize(frame)<255)
+        {
+            Frame_setNextByte (frame, self->fileData[len]);
+        }
+        else
+            break;
+
+    }
+
+    Frame_setNextByte (frame, self->fileCheckSum);
+
+    return true;
+}
+
+struct sInformationObjectVFT FileTransferWriteVFT = {
+        (EncodeFunction) FileTransferWrite_encode,
+        (DestroyFunction) FileTransferWrite_destroy
+};
+
+static void
+FileTransferWrite_initialize(FileTransferWrite self)
+{
+    self->virtualFunctionTable = &(FileTransferWriteVFT);
+    self->type = F_FR_NA_1;
+}
+
+FileTransferWrite FileTransferWrite_create(FileTransferWrite self, int ioa, uint8_t operateType, uint32_t fileID, uint32_t segmentnumber, uint8_t followupFlag,char* fileData,uint8_t fileCheckSum)
+{
+    if (self == NULL)
+        self = (FileTransferWrite) GLOBAL_MALLOC(sizeof(struct sFileTransferWrite));
+
+    if (self != NULL) {
+        FileTransferWrite_initialize(self);
+
+        self->objectAddress = ioa;
+        self->operateType = operateType;
+
+        self->fileID = fileID;
+        self->segmentnumber = segmentnumber;
+        self->followupFlag = followupFlag;
+        self->fileData = fileData;
+        self->fileCheckSum = fileCheckSum;
+    }
+
+    return self;
+}
+
+
+void FileTransferWrite_destroy(FileTransferWrite self)
+{
+    if (self != NULL)
+        GLOBAL_FREEMEM(self);
+}
+
+
+/*************************************************
+ * FileTransferAffirm : InformationObject 写文件数据传输确认
+ *************************************************/
+static bool
+FileTransferAffirmWrite_encode(FileTransferAffirmWrite self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence)
+{
+    InformationObject_encodeBase((InformationObject) self, frame, parameters, isSequence);
+
+    Frame_setNextByte (frame, 2);//附加数据包类型 1-备用  2-文件传输  3-备用  4-备用
+
+//    uint8_t operateType;           //1字节:操作标识  6：读文件数据响应
+//    uint32_t fileID;               //4字节：文件ID
+//    uint32_t segmentnumber;        //4字节：数据段号,可以使用文件内容的偏移指针值
+//    uint8_t followupFlag;          //1字节:后续标志,0：无后续,1：有后续
+
+    Frame_setNextByte (frame, self->operateType);
+
+    Frame_setNextByte (frame, (uint8_t)(self->fileID % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->fileID / 0x1000000) % 0x100));
+
+    Frame_setNextByte (frame, (uint8_t)(self->segmentnumber % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->segmentnumber / 0x100) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->segmentnumber / 0x10000) % 0x100));
+    Frame_setNextByte (frame, (uint8_t)((self->segmentnumber / 0x1000000) % 0x100));
+
+    Frame_setNextByte (frame, self->resultDescribe);
+
+    return true;
+}
+
+struct sInformationObjectVFT FileTransferAffirmWriteVFT = {
+        (EncodeFunction) FileTransferAffirmWrite_encode,
+        (DestroyFunction) FileTransferAffirmWrite_destroy
+};
+
+static void
+FileTransferAffirmWrite_initialize(FileTransferAffirmWrite self)
+{
+    self->virtualFunctionTable = &(FileTransferAffirmWriteVFT);
+    self->type = F_FR_NA_1;
+}
+
+FileTransferAffirmWrite
+FileTransferAffirmWrite_getFromBuffer(FileTransferAffirmWrite self, CS101_AppLayerParameters parameters,
+                                 uint8_t* msg, int msgSize, int startIndex, bool isSequence)
+{
+    if (self == NULL)
+       self = (FileTransferAffirmWrite) GLOBAL_MALLOC(sizeof(struct sFileTransferAffirmWrite));
+
+    if (self != NULL) {
+
+        FileTransferAffirmWrite_initialize(self);
+
+        if (!isSequence) {
+            InformationObject_getFromBuffer((InformationObject) self, parameters, msg, startIndex);
+
+            startIndex += parameters->sizeOfIOA; /* skip IOA */
+        }
+        startIndex++;//附加数据包类型 2：文件传输；
+        //    uint8_t operateType;           //1字节:操作标识  4：读文件激活确认
+        //    uint32_t fileID;               //4字节：文件ID
+        //    uint32_t segmentnumber;        //4字节：数据段号
+        //    uint8_t resultDescribe;        //1字节:结果描述字 0-成功 1-失败
+
+
+        //操作标识   2：读目录确认
+        self->operateType = msg[startIndex++];
+        //文件ID
+        self->fileID = msg [startIndex++];
+        self->fileID += (msg [startIndex++] * 0x100);
+        self->fileID += (msg [startIndex++] * 0x10000);
+        self->fileID += (msg [startIndex++] * 0x1000000);
+        //数据段号
+        self->segmentnumber = msg [startIndex++];
+        self->segmentnumber += (msg [startIndex++] * 0x100);
+        self->segmentnumber += (msg [startIndex++] * 0x10000);
+        self->segmentnumber += (msg [startIndex++] * 0x1000000);
+        //结果描述字
+        self->resultDescribe = msg[startIndex++];
+
+    }
+
+
+
+    return self;
+}
+
+int FileTransferAffirmWrite_getOperateType(FileTransferAffirmWrite self)
+{
+    return self->operateType;
+}
+
+unsigned char FileTransferAffirmWrite_getResultDescribe(FileTransferAffirmWrite self)
+{
+    return self->resultDescribe;
+}
+
+
+
+unsigned int FileTransferAffirmWrite_getFileID(FileTransferAffirmWrite self)
+{
+    return self->fileID;
+}
+
+unsigned int FileTransferAffirmWrite_getFilesegmentnumber(FileTransferAffirmWrite self)
+{
+    return self->segmentnumber;
+}
+
+
+void FileTransferAffirmWrite_destroy(FileTransferAffirmWrite self)
+{
+    GLOBAL_FREEMEM(self);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //========== <210>	：文件服务 ==========//

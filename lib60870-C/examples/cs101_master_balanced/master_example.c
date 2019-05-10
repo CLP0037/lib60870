@@ -97,7 +97,7 @@ main(int argc, char** argv)
 {
     signal(SIGINT, sigint_handler);
 
-    const char* serialPort = "/dev/ttyUSB0";
+    const char* serialPort = "COM12";//"/dev/ttyUSB0"
 
     if (argc > 1)
         serialPort = argv[1];
@@ -112,7 +112,9 @@ main(int argc, char** argv)
     /* set handler for link layer state changes */
     CS101_Master_setLinkLayerStateChanged(master, linkLayerStateChanged, NULL);
 
-    SerialPort_open(port);
+    bool rtn = SerialPort_open(port);
+    if(rtn)
+        printf("========SerialPort_open sucess========\n");
 
     running = true;
 
@@ -122,6 +124,7 @@ main(int argc, char** argv)
 
         CS101_Master_run(master);
 
+        /*
         if (cycleCounter == 10)
             CS101_Master_sendInterrogationCommand(master, CS101_COT_ACTIVATION, 1, IEC60870_QOI_STATION);
 
@@ -135,8 +138,9 @@ main(int argc, char** argv)
 
             InformationObject_destroy(sc);
         }
+        */
 
-        if (cycleCounter == 80) {
+        if (cycleCounter == 80*10) {//
             /* Send clock synchronization command */
             struct sCP56Time2a newTime;
 
@@ -146,7 +150,7 @@ main(int argc, char** argv)
             CS101_Master_sendClockSyncCommand(master, 1, &newTime);
         }
 
-        Thread_sleep(1);
+        Thread_sleep(10);//1
 
         cycleCounter++;
     }

@@ -1280,6 +1280,8 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
         //4-文件激活确认
         //5-读文件数据响应=======提取文件
 
+        //8：写文件激活确认
+        //10：写文件数据传输确认
 
         operateType = CS101_ASDU_getFileOperateType(self);//self->asdu[9];
 
@@ -1301,6 +1303,18 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
                 //5 FileTransfer
                 retVal  = (InformationObject) FileTransfer_getFromBuffer(NULL, self->parameters,
                     self->payload, self->payloadSize, 0, false);
+            break;
+
+        case 8:
+            //8 FileActivateAffirmWrite
+            retVal  = (InformationObject) FileActivateAffirmWrite_getFromBuffer(NULL, self->parameters,
+                self->payload, self->payloadSize, 0, false);
+            break;
+
+        case 10:
+            //10 FileTransferAffirmWrite
+            retVal  = (InformationObject) FileTransferAffirmWrite_getFromBuffer(NULL, self->parameters,
+                self->payload, self->payloadSize, 0, false);
             break;
         }
 
