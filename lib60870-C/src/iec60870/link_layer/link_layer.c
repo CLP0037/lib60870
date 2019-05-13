@@ -68,8 +68,8 @@ void
 LinkLayerPrimaryUnbalanced_runStateMachine(LinkLayerPrimaryUnbalanced self);
 
 struct sLinkLayer {
-    uint8_t buffer[256];
-    uint8_t userDataBuffer[255];
+    uint8_t buffer[256*4*2];
+    uint8_t userDataBuffer[256*4*2-1];//255
     int address;
     SerialTransceiverFT12 transceiver;
     LinkLayerParameters linkLayerParameters;

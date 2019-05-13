@@ -50,7 +50,7 @@ struct sCS101_StaticASDU {
     int asduHeaderLength;
     uint8_t* payload;
     int payloadSize;
-    uint8_t encodedData[256];
+    uint8_t encodedData[256*4*2];
 };
 
 /**

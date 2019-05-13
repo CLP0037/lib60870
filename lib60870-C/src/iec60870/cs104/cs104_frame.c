@@ -36,7 +36,7 @@
 struct sT104Frame {
     FrameVFT virtualFunctionTable;
 
-    uint8_t buffer[256];
+    uint8_t buffer[256*4*2];
     int msgSize;
 
 #if (CONFIG_LIB60870_STATIC_FRAMES == 1)
@@ -116,7 +116,7 @@ T104Frame_create()
     if (self != NULL) {
 
         int i;
-        for (i = 0; i < 256; i++)
+        for (i = 0; i < 256*4*2; i++)
             self->buffer[i] = 0;
 
         self->virtualFunctionTable = &t104FrameVFT;
@@ -147,7 +147,7 @@ T104Frame_create_104P(int msgsize_base)
     if (self != NULL) {
 
         int i;
-        for (i = 0; i < 256; i++)
+        for (i = 0; i < 256*4*2; i++)
             self->buffer[i] = 0;
 
         self->virtualFunctionTable = &t104FrameVFT;

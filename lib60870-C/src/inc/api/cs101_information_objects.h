@@ -1986,7 +1986,7 @@ unsigned int FileActivateAffirmWrite_getFilesize(FileActivateAffirmWrite self);
 void FileActivateAffirmWrite_destroy(FileActivateAffirmWrite self);
 
 typedef struct  sFileTransferWrite* FileTransferWrite;//写文件数据传输
-FileTransferWrite FileTransferWrite_create(FileTransferWrite self, int ioa, uint8_t operateType, uint32_t fileID, uint32_t segmentnumber, uint8_t followupFlag,char* fileData,uint8_t fileCheckSum);
+FileTransferWrite FileTransferWrite_create(FileTransferWrite self, int ioa, uint8_t operateType, uint32_t fileID, uint32_t segmentnumber, uint8_t followupFlag,char* fileData,int fileDatasize,uint8_t fileCheckSum);
 void FileTransferWrite_destroy(FileTransferWrite self);
 
 typedef struct  sFileTransferAffirmWrite* FileTransferAffirmWrite;//写文件数据传输确认(接收)

@@ -9017,13 +9017,21 @@ FileActivateAffirmWrite_getFromBuffer(FileActivateAffirmWrite self, CS101_AppLay
         //文件名长度
         self->fileNamelength = msg [startIndex++];
         //文件名称
+        char fileName_temp[256];
         for(int len=0;len<256;len++)
         {
             if(len<self->fileNamelength)
-                self->fileName[len]=msg [startIndex++];
+            {
+                //self->fileName[len]=msg [startIndex++];
+                fileName_temp[len]=msg [startIndex++];
+            }
             else
-                self->fileName[len]='\0';
+            {
+                //self->fileName[len]='\0';
+                fileName_temp[len]='\0';
+            }
         }
+        self->fileName = (char*)fileName_temp;
         //文件ID
         self->fileID = msg [startIndex++];
         self->fileID += (msg [startIndex++] * 0x100);
@@ -9110,15 +9118,19 @@ FileTransferWrite_encode(FileTransferWrite self, Frame frame, CS101_AppLayerPara
     Frame_setNextByte (frame, self->followupFlag);
 
     //fileData
-    for(int len=0;len<256;len++)
-    {
-        if(self->fileData[len]!='\0'&&Frame_getMsgSize(frame)<255)
-        {
-            Frame_setNextByte (frame, self->fileData[len]);
-        }
-        else
-            break;
+//    for(int len=0;len<256;len++)
+//    {
+//        if(self->fileData[len]!='\0')//&&Frame_getMsgSize(frame)<255
+//        {
+//            Frame_setNextByte (frame, self->fileData[len]);
+//        }
+//        else
+//            break;
 
+//    }
+    for(int i=0;i<self->fileDatasize;i++)
+    {
+        Frame_setNextByte (frame, self->fileData[i]);
     }
 
     Frame_setNextByte (frame, self->fileCheckSum);
@@ -9138,7 +9150,7 @@ FileTransferWrite_initialize(FileTransferWrite self)
     self->type = F_FR_NA_1;
 }
 
-FileTransferWrite FileTransferWrite_create(FileTransferWrite self, int ioa, uint8_t operateType, uint32_t fileID, uint32_t segmentnumber, uint8_t followupFlag,char* fileData,uint8_t fileCheckSum)
+FileTransferWrite FileTransferWrite_create(FileTransferWrite self, int ioa, uint8_t operateType, uint32_t fileID, uint32_t segmentnumber, uint8_t followupFlag,char* fileData,int fileDatasize,uint8_t fileCheckSum)
 {
     if (self == NULL)
         self = (FileTransferWrite) GLOBAL_MALLOC(sizeof(struct sFileTransferWrite));
@@ -9153,6 +9165,12 @@ FileTransferWrite FileTransferWrite_create(FileTransferWrite self, int ioa, uint
         self->segmentnumber = segmentnumber;
         self->followupFlag = followupFlag;
         self->fileData = fileData;
+        self->fileDatasize = fileDatasize;
+//        for(int i=0;i<self->fileDatasize;i++)
+//        {
+//           self->fileData[i] =  fileData[i];
+//        }
+
         self->fileCheckSum = fileCheckSum;
     }
 

@@ -776,7 +776,8 @@ isSentBufferFull(CS104_Connection self)
         return false;
 
     int newIndex = (self->newestSentASDU + 1) % self->maxSentASDUs;
-
+//k 表示在某一特定的时间内未被 DTE 确认（即不被承认）的连续编号的 I 格式 APDU的最大数目
+//k 值的最大范围：推荐值为 12，精确到一个 APDU
     if (newIndex == self->oldestSentASDU)
         return true;
     else
@@ -952,6 +953,41 @@ receiveMessageTlsSocket(TLSSocket socket, uint8_t* buffer)
 #endif /*  (CONFIG_CS104_SUPPORT_TLS == 1) */
 
 static inline int
+receiveMessageSocket_104P(Socket socket, uint8_t* buffer)
+{
+    int readFirst = Socket_read(socket, buffer, 1);
+
+    if (readFirst < 1)
+    {
+        DEBUG_PRINT("DEBUG_LIB60870:(warnning)Socket_read(socket, buffer, 1) return value < 1,value is  = %i\n", readFirst);
+        return readFirst;
+    }
+
+    if (buffer[0] != 0x68)//读取首字节失败
+    {
+        DEBUG_PRINT("DEBUG_LIB60870:(warnning)message error,buffer[0] != 0x68,buffer[0] == %i\n", buffer[0]);
+        return -2; /* message error */
+    }
+
+    if (Socket_read(socket, buffer + 1, 1) != 1)//读取长度失败
+    {
+        DEBUG_PRINT("DEBUG_LIB60870:(warnning)Socket_read(socket, buffer + 1, 1) != 1\n");
+        return -3;
+    }
+
+    int length = buffer[1];
+
+    /* read remaining frame */
+    if (Socket_read(socket, buffer + 2, length+1) != (length+1))
+    {
+        DEBUG_PRINT("DEBUG_LIB60870:(warnning)message error,Socket_read(socket, buffer + 2, length) != buffer[1]\n");
+        return -4;
+    }
+
+    return length + 3;
+}
+
+static inline int
 receiveMessageSocket(Socket socket, uint8_t* buffer)
 {
     int readFirst = Socket_read(socket, buffer, 1);
@@ -1009,7 +1045,10 @@ receiveMessage(CS104_Connection self, uint8_t* buffer)
     else
         return receiveMessageSocket(self->socket, buffer);
 #else
-    return receiveMessageSocket(self->socket, buffer);
+    if(self->baseProtocalType == 2)//104+
+        return receiveMessageSocket_104P(self->socket, buffer);
+    else
+        return receiveMessageSocket(self->socket, buffer);
 #endif
 }
 
@@ -2068,8 +2107,8 @@ CS104_Connection_sendSoftwareUpgrade(CS104_Connection self, CS101_CauseOfTransmi
 {
     //Frame frame = (Frame) T104Frame_create();
     Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
-
-    encodeIdentificationField(self, frame, C_IC_NA_1, 1, cot, ca);
+    //F_SR_NA_1 = 211 //<211>：= 软件升级
+    encodeIdentificationField(self, frame, F_SR_NA_1, 1, cot, ca);
 
     encodeIOA(self, frame, 0);
 
