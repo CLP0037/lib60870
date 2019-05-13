@@ -2063,6 +2063,21 @@ CS104_Connection_sendInterrogationCommand(CS104_Connection self, CS101_CauseOfTr
     return sendASDUInternal(self, frame);
 }
 
+bool
+CS104_Connection_sendSoftwareUpgrade(CS104_Connection self, CS101_CauseOfTransmission cot, int ca, uint8_t ctype)
+{
+    //Frame frame = (Frame) T104Frame_create();
+    Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
+
+    encodeIdentificationField(self, frame, C_IC_NA_1, 1, cot, ca);
+
+    encodeIOA(self, frame, 0);
+
+    T104Frame_setNextByte(frame, ctype); //ctype     命令类型  (&0x80)=1，软件升级启动；=0，软件升级结束；
+
+    return sendASDUInternal(self, frame);
+}
+
 //<101>∶＝电能量召唤命令   C_CI_NA_1=101
 bool
 CS104_Connection_sendCounterInterrogationCommand(CS104_Connection self, CS101_CauseOfTransmission cot, int ca, uint8_t qcc)

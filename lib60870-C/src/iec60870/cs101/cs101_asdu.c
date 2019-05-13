@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2016, 2017 MZ Automation GmbH
  *
  *  This file is part of lib60870-C
@@ -1274,7 +1274,7 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
     }break;
 
     case F_FR_NA_1: /* 210 - File service */
-
+    {
         //根据不同的操作标识给与不同的响应
         //2-目录召唤确认========提取目录
         //4-文件激活确认
@@ -1317,15 +1317,13 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
                 self->payload, self->payloadSize, 0, false);
             break;
         }
+    }break;
 
+    case F_SR_NA_1: /* 211 - software upgrade */
+    {
+        retVal = (InformationObject) CounterInterrogationCommand_getFromBuffer(NULL, self->parameters, self->payload, self->payloadSize,  0);
 
-
-
-
-
-
-        break;
-
+    }break;
 
 
 

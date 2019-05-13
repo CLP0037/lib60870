@@ -230,6 +230,9 @@ CS104_Connection_isTransmitBufferFull(CS104_Connection self);
 bool
 CS104_Connection_sendInterrogationCommand(CS104_Connection self, CS101_CauseOfTransmission cot, int ca, QualifierOfInterrogation qoi);
 
+bool
+CS104_Connection_sendSoftwareUpgrade(CS104_Connection self, CS101_CauseOfTransmission cot, int ca, uint8_t ctype);
+
 /**
  * \brief send a counter interrogation command
  *
