@@ -8725,7 +8725,7 @@ FileTransfer_getFromBuffer(FileTransfer self, CS101_AppLayerParameters parameter
         //1字节:校验码
         //if (msgSize < startIndex + 7)
         int temp_filesize = msgSize - startIndex-1;
-        for(int len=0;len<256;len++)
+        for(int len=0;len<256*4*2;len++)
         {
             if(len<temp_filesize)
                 self->fileData[len]=msg [startIndex++];

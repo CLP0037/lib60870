@@ -44,9 +44,9 @@ lib60870_debug_print(const char *format, ...)
         va_start(ap, format);
         vprintf(format, ap);
         va_end(ap);
-//#ifdef WIN32
-//        qDebug()<<"DEBUG_LIB60870(win32):"<<format;//带格式的输出问题有待解决!!!
-//#endif
+#ifdef WIN32
+        qDebug(format);//带格式的输出问题有待解决!!!
+#endif
     }
 #endif
 }

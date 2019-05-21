@@ -1474,8 +1474,8 @@ struct sFileTransfer{//读文件传输
     uint32_t segmentnumber;        //4字节：数据段号,可以使用文件内容的偏移指针值
     uint8_t followupFlag;          //1字节:后续标志,0：无后续,1：有后续
     //char* fileData;                //x字节：文件数据
-    char fileData[256];
-    uint8_t file_currentlen; //当前段长度
+    char fileData[256*4*2];
+    int file_currentlen; //当前段长度
     uint8_t fileCheckSum;          //1字节:校验码(校验范围：文件数据 校验算法：单字节模和运算)
 };
 

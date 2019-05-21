@@ -974,13 +974,18 @@ receiveMessageSocket_104P(Socket socket, uint8_t* buffer)
         DEBUG_PRINT("DEBUG_LIB60870:(warnning)Socket_read(socket, buffer + 1, 1) != 1\n");
         return -3;
     }
+    if (Socket_read(socket, buffer + 2, 1) != 1)//读取长度失败
+    {
+        DEBUG_PRINT("DEBUG_LIB60870:(warnning)Socket_read(socket, buffer + 2, 1) != 1\n");
+        return -3;
+    }
 
-    int length = buffer[1];
+    int length = buffer[1] + buffer[2]*256;
 
     /* read remaining frame */
-    if (Socket_read(socket, buffer + 2, length+1) != (length+1))
+    if (Socket_read(socket, buffer + 3, length) != length)
     {
-        DEBUG_PRINT("DEBUG_LIB60870:(warnning)message error,Socket_read(socket, buffer + 2, length) != buffer[1]\n");
+        DEBUG_PRINT("DEBUG_LIB60870:(warnning)message error,Socket_read(socket, buffer + 2, length) != (%1)buffer[1]+ buffer[2]*256\n",length);
         return -4;
     }
 
@@ -1111,8 +1116,8 @@ checkMessage(CS104_Connection self, uint8_t* buffer, int msgSize)
 
 //        int frameSendSequenceNumber = ((buffer [3] * 0x100) + (buffer [2] & 0xfe)) / 2;
 //        int frameRecvSequenceNumber = ((buffer [5] * 0x100) + (buffer [4] & 0xfe)) / 2;
-        int frameSendSequenceNumber;
-        int frameRecvSequenceNumber;
+        int frameSendSequenceNumber = 0;
+        int frameRecvSequenceNumber = 0;
         if(self->baseProtocalType == 2)//104+
         {
             frameSendSequenceNumber = ((buffer [4] * 0x100) + (buffer [3] & 0xfe)) / 2;
@@ -1489,7 +1494,7 @@ handleConnection(void* parameter)
 
             while (loopRunning) {
 
-                uint8_t buffer[300];
+                uint8_t buffer[300*4*2];
 
                 Handleset_reset(handleSet);
                 Handleset_addSocket(handleSet, self->socket);
@@ -1497,12 +1502,17 @@ handleConnection(void* parameter)
                 if (Handleset_waitReady(handleSet, 100)) {
                     int bytesRec = receiveMessage(self, buffer);
 
-                    if (bytesRec == -1) {
+                    if (bytesRec <= -1) {
                         loopRunning = false;
                         self->failure = true;//perror();strerror(errno);
                         if (self->importantInfoHandler != NULL)
                         {
-                            self->importantInfoHandler(self->importantInfoHandlerParameter, "loopRunning is set false,receiveMessage bytesRec == -1,strerror(errno):");
+                            char bytesRecstr[5];
+                            itoa(bytesRec, bytesRecstr, 10);
+                            printf("Error reading from socket,loopRunning is set false,receiveMessage bytesRec == %d,strerror(errno): %s\n",bytesRec,strerror(errno));
+                            //DEBUG_PRINT("Error reading from socket,loopRunning is set false,receiveMessage bytesRec == %d,strerror(errno): %s\n",bytesRec,strerror(errno));
+                            self->importantInfoHandler(self->importantInfoHandlerParameter, "loopRunning is set false,receiveMessage bytesRec <0, bytesRec/strerror(errno):");
+                            self->importantInfoHandler(self->importantInfoHandlerParameter, bytesRecstr);
                             self->importantInfoHandler(self->importantInfoHandlerParameter, strerror(errno));
                         }
                     }
@@ -3660,8 +3670,8 @@ handleMessage_sDEV(CS104_Connection self, uint8_t* buffer, int msgSize)
 
 //        int frameSendSequenceNumber = ((buffer [3] * 0x100) + (buffer [2] & 0xfe)) / 2;
 //        int frameRecvSequenceNumber = ((buffer [5] * 0x100) + (buffer [4] & 0xfe)) / 2;
-        int frameSendSequenceNumber;
-        int frameRecvSequenceNumber;
+        int frameSendSequenceNumber = 0;
+        int frameRecvSequenceNumber = 0;
         if(self->baseProtocalType == 2)//104+
         {
             frameSendSequenceNumber = ((buffer [4] * 0x100) + (buffer [3] & 0xfe)) / 2;
@@ -3954,10 +3964,10 @@ handleConnection_sDEV(void* parameter)
                 if (Handleset_waitReady(handleSet, 100)) {
                     int bytesRec = receiveMessage(self, buffer);
 
-                    if (bytesRec == -1) {
+                    if (bytesRec <= -1) {
                         loopRunning = false;
                         self->failure = true;//perror();strerror(errno);
-                        DEBUG_PRINT("Error reading from socket,loopRunning is set false,receiveMessage bytesRec == -1,strerror(errno): %s\n",strerror(errno));//
+                        DEBUG_PRINT("Error reading from socket,loopRunning is set false,receiveMessage bytesRec == %d,strerror(errno): %s\n",bytesRec,strerror(errno));//
                     }
 
                     if (bytesRec > 0) {
