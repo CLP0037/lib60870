@@ -1343,7 +1343,7 @@ FaultEventWithCP56Time2a_initialize(FaultEventWithCP56Time2a self)
 
 FaultEventWithCP56Time2a
 FaultEventWithCP56Time2a_getFromBuffer(FaultEventWithCP56Time2a self, CS101_AppLayerParameters parameters,
-        uint8_t* msg, int msgSize, int startIndex, bool isSequence)
+        uint8_t* msg, int msgSize, int startIndex, bool isSequence,int bytelenYXdot)
 {
     //TODO check message size
 
@@ -1357,18 +1357,28 @@ FaultEventWithCP56Time2a_getFromBuffer(FaultEventWithCP56Time2a self, CS101_AppL
 //            InformationObject_getFromBuffer((InformationObject) self, parameters, msg, startIndex);
 //            startIndex += parameters->sizeOfIOA; /* skip IOA */
 //        }
+        //对故障事件而言:遥测信息体地址字节数为3位，遥信信息体地址字节数可为2位也可为3位(默认2位)
 
         //YX
         self->num_YX = msg [startIndex++];//带时标遥信个数
         self->type_YX = msg [startIndex++];//遥信类型======单点=1 双点=3
-
+        //int bytelen_YX = 2;//====debug
         int i=0;
         for(i=0;i<self->num_YX;i++)
         {
             //故障遥信点号  2 字节(change to 3 bytes for YX_infomation_addr)
-            self->structFaultEven_YX[i].addr = msg [startIndex++];
-            self->structFaultEven_YX[i].addr += (msg [startIndex++] * 0x100);
-            self->structFaultEven_YX[i].addr += (msg [startIndex++] * 0x10000);
+            if(bytelenYXdot == 3)
+            {
+                self->structFaultEven_YX[i].addr = msg [startIndex++];
+                self->structFaultEven_YX[i].addr += (msg [startIndex++] * 0x100);
+                self->structFaultEven_YX[i].addr += (msg [startIndex++] * 0x10000);
+            }
+            else //默认2位
+            {
+                self->structFaultEven_YX[i].addr = msg [startIndex++];
+                self->structFaultEven_YX[i].addr += (msg [startIndex++] * 0x100);
+            }
+
 
             //遥信值  1 字节
             self->structFaultEven_YX[i].State = msg [startIndex++];
@@ -7608,7 +7618,7 @@ RemoteReadSN_getFromBuffer(RemoteReadSN self, CS101_AppLayerParameters parameter
 //        信息体地址（0）  3 字节
 //        当前定值区区号 SN1  2 字节
 //        终端支持的最小定值区号 SN2  2 字节
-//        终端支持的最大定值区号 SN3  7 字节
+//        终端支持的最大定值区号 SN3  7 字节(101)    2字节(104/104+)
         self->SN1 = msg[startIndex++];
         self->SN1 += (msg[startIndex++] * 0x100);
 
@@ -7617,8 +7627,8 @@ RemoteReadSN_getFromBuffer(RemoteReadSN self, CS101_AppLayerParameters parameter
 
         self->SN3 = msg[startIndex++];//7字节？？
         self->SN3 += (msg[startIndex++] * 0x100);
-        self->SN3 += (msg [startIndex++] * 0x10000);
-        self->SN3 += (msg [startIndex++] * 0x1000000);
+//        self->SN3 += (msg [startIndex++] * 0x10000);
+//        self->SN3 += (msg [startIndex++] * 0x1000000);
 
     }
 

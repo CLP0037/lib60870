@@ -39,6 +39,8 @@ struct sCS101_ASDU {
     int asduHeaderLength;
     uint8_t* payload;
     int payloadSize;
+
+    int faulteventYXbytelen;//故障事件遥信点号个数    int bytelen_YX;//故障遥信点号字节数 2或3
 };
 
 typedef struct sCS101_StaticASDU* CS101_StaticASDU;

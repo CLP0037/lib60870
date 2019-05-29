@@ -71,7 +71,7 @@ SinglePointWithCP56Time2a_getFromBuffer(SinglePointWithCP56Time2a self, CS101_Ap
 //42故障事件
 FaultEventWithCP56Time2a
 FaultEventWithCP56Time2a_getFromBuffer(FaultEventWithCP56Time2a self, CS101_AppLayerParameters parameters,
-        uint8_t* msg, int msgSize, int startIndex, bool isSequence);
+        uint8_t* msg, int msgSize, int startIndex, bool isSequence,int bytelenYXdot);
 
 BitString32
 BitString32_getFromBuffer(BitString32 self, CS101_AppLayerParameters parameters,

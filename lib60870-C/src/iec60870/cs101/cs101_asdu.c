@@ -302,6 +302,17 @@ CS101_ASDU_setCOT(CS101_ASDU self, CS101_CauseOfTransmission value)
     self->asdu[2] = cot;
 }
 
+void
+CS101_ASDU_setFaulteventYXbytelen(CS101_ASDU self,char value)
+{
+    if(value == 2 || value == 3)
+    {
+        self->faulteventYXbytelen = value;
+    }
+    else
+        self->faulteventYXbytelen = 2;
+}
+
 int
 CS101_ASDU_getCA(CS101_ASDU self)
 {
@@ -967,7 +978,7 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
         */
 
         retVal  = (InformationObject) FaultEventWithCP56Time2a_getFromBuffer(NULL, self->parameters,
-            self->payload, self->payloadSize, 0, false);
+            self->payload, self->payloadSize, 0, false,self->faulteventYXbytelen);
 
         break;
     /* 41 - 44 reserved */

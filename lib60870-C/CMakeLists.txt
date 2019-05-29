@@ -5,11 +5,27 @@ cmake_minimum_required(VERSION 3.13)
 SET_PROPERTY(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS TRUE)
 # automagically detect if we should cross-compile
 
+MESSAGE( STATUS "QT_QMAKE_EXECUTABLE:" ${QT_QMAKE_EXECUTABLE} )
+MESSAGE( STATUS "$ENV TOOLCHAIN:         " ${TOOLCHAIN} )
+
+#if(QT_QMAKE_EXECUTABLE MATCHES "android")#android_armv7
+#    SET(CMAKE_C_COMPILER "d:/Programs/AndroidToolchain/bin/arm-linux-androideabi-gcc.exe")
+#    SET(CMAKE_CXX_COMPILER "d:/Programs/AndroidToolchain/bin/arm-linux-androideabi-c++.exe")
+#    SET(CMAKE_TOOLCHAIN_FILE "d:/Programs/qt-android-cmake/toolchain/android.toolchain.cmake")
+#    SET(CMAKE_MAKE_PROGRAM "d:/Programs/AndroidToolchain/bin/make.exe")
+#    #SET()
+##endif()
+#else
 if(DEFINED ENV{TOOLCHAIN})
 	set(CMAKE_C_COMPILER	$ENV{TOOLCHAIN}gcc)
 	set(CMAKE_CXX_COMPILER	$ENV{TOOLCHAIN}g++)
 	set(CMAKE_AR	"$ENV{TOOLCHAIN}ar" CACHE FILEPATH "CW archiver" FORCE)
 endif()
+
+#if(QT_QMAKE_EXECUTABLE MATCHES "arm")
+#    SET(CMAKE_C_COMPILER "arm-linux-gcc")
+#    SET(CMAKE_CXX_COMPILER "arm-linux-g++")
+#endif()
 
 
 #INCLUDE(${QT_USE_FILE})

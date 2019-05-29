@@ -354,6 +354,8 @@ CS101_ASDU_getCOT(CS101_ASDU self);
 void
 CS101_ASDU_setCOT(CS101_ASDU self, CS101_CauseOfTransmission value);
 
+void
+CS101_ASDU_setFaulteventYXbytelen(CS101_ASDU self,char value);
 /**
  * \brief Get the common address (CA) of the ASDU
  */
