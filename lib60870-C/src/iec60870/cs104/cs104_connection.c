@@ -2151,11 +2151,15 @@ CS104_Connection_sendCounterInterrogationCommand(CS104_Connection self, CS101_Ca
     //Frame frame = (Frame) T104Frame_create();
     Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
 
+    //C_CI_NA_1=101    类型标识符 TI 1 字节
+    //VSQ = 1          可变帧长限定词 VSQ 1 字节
+    //COT = 6/7/10     传送原因 COT 2 字节
+    //ca               ASDU 公共地址 2
     encodeIdentificationField(self, frame, C_CI_NA_1, 1, cot, ca);
 
-    encodeIOA(self, frame, 0);
+    encodeIOA(self, frame, 0);//信息对象地址（=0） 3 字节
 
-    /* encode QCC */
+    /* encode QCC */  //计量信息命令限定词 QCC 1 字节
     T104Frame_setNextByte(frame, qcc);
 
     return sendASDUInternal(self, frame);
@@ -2234,7 +2238,7 @@ CS104_Connection_sendTestCommand(CS104_Connection self, int ca)
 
     encodeIOA(self, frame, 0);
 
-    T104Frame_setNextByte(frame, 0xcc);
+    T104Frame_setNextByte(frame, 0xaa);//0xcc
     T104Frame_setNextByte(frame, 0x55);
 
     return sendASDUInternal(self, frame);

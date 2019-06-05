@@ -1284,6 +1284,42 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
             self->payload, self->payloadSize, 0, false, nums);
     }break;
 
+
+    case M_IT_NB_1 ://206,//<206>∶＝累计量，短浮点数
+    {
+        elementSize = 5;
+
+        if (CS101_ASDU_isSequence(self)) {
+            retVal  = (InformationObject) MeasuredValueShort_getFromBuffer(NULL, self->parameters,
+                    self->payload, self->payloadSize, self->parameters->sizeOfIOA + (index * elementSize), true);
+
+            InformationObject_setObjectAddress(retVal, InformationObject_ParseObjectAddress(self->parameters, self->payload, 0) + index);
+        }
+        else
+            retVal  = (InformationObject) MeasuredValueShort_getFromBuffer(NULL, self->parameters,
+                    self->payload, self->payloadSize, index * (self->parameters->sizeOfIOA + elementSize), false);
+
+
+    }break;
+
+    case M_IT_TC_1 ://207,//<207>∶＝带 CP56Time2a 时标的累计量，短浮点数
+    {
+        elementSize = 12;
+
+        if (CS101_ASDU_isSequence(self)) {
+            retVal  = (InformationObject) MeasuredValueShortWithCP56Time2a_getFromBuffer(NULL, self->parameters,
+                    self->payload, self->payloadSize, self->parameters->sizeOfIOA + (index * elementSize), true);
+
+            InformationObject_setObjectAddress(retVal, InformationObject_ParseObjectAddress(self->parameters, self->payload, 0) + index);
+        }
+        else
+            retVal  = (InformationObject) MeasuredValueShortWithCP56Time2a_getFromBuffer(NULL, self->parameters,
+                    self->payload, self->payloadSize, index * (self->parameters->sizeOfIOA + elementSize), false);
+
+        break;
+
+    }break;
+
     case F_FR_NA_1: /* 210 - File service */
     {
         //根据不同的操作标识给与不同的响应

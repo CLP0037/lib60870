@@ -33,6 +33,7 @@
 #include "lib_memory.h"
 #include "frame.h"
 #include "platform_endian.h"
+#include "lib60870_internal.h"
 
 typedef bool (*EncodeFunction)(InformationObject self, Frame frame, CS101_AppLayerParameters parameters, bool isSequence);
 typedef void (*DestroyFunction)(InformationObject self);
@@ -9145,6 +9146,19 @@ FileTransferWrite_encode(FileTransferWrite self, Frame frame, CS101_AppLayerPara
 
     Frame_setNextByte (frame, self->fileCheckSum);
 
+    //================for debug
+    int sum = 0;
+    for(int i=0;i<self->fileDatasize;i++)//fileData.size()
+    {
+        sum += self->fileData[i];
+    }
+    uint8_t checkSum = sum&0xFF;
+
+    if(self->fileCheckSum != checkSum)
+    {
+        DEBUG_PRINT("checksum error");
+    }
+
     return true;
 }
 
@@ -9182,6 +9196,20 @@ FileTransferWrite FileTransferWrite_create(FileTransferWrite self, int ioa, uint
 //        }
 
         self->fileCheckSum = fileCheckSum;
+
+        //================for debug
+        int sum = 0;
+        for(int i=0;i<fileDatasize;i++)//fileData.size()
+        {
+            sum += fileData[i];
+        }
+        uint8_t checkSum = sum&0xFF;
+
+        if(fileCheckSum != checkSum)
+        {
+            DEBUG_PRINT("checksum error");
+        }
+
     }
 
     return self;

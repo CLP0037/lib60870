@@ -298,7 +298,7 @@ void
 InformationObject_destroy(InformationObject self);
 
 /************************************************
- * SinglePointInformation (:InformationObject)
+ * SinglePointInformation (:InformationObject)单点遥信
  ************************************************/
 
 typedef struct sSinglePointInformation* SinglePointInformation;
@@ -350,7 +350,7 @@ SinglePointWithCP56Time2a_getTimestamp(SinglePointWithCP56Time2a self);
 
 //42==故障事件信息 FaultEventWithCP56Time2a
 /********************************************************
- *  FaultEventWithCP56Time2a (:SinglePointInformation + YCvalue)
+ *  FaultEventWithCP56Time2a (:SinglePointInformation + YCvalue)故障事件
  ********************************************************/
 
 typedef struct sFaultEventWithCP56Time2a* FaultEventWithCP56Time2a;
@@ -375,7 +375,7 @@ void FaultEventWithCP56Time2a_destroy(FaultEventWithCP56Time2a self);
 
 
 /************************************************
- * DoublePointInformation (:InformationObject)
+ * DoublePointInformation (:InformationObject) 双点遥信
  ************************************************/
 
 typedef struct sDoublePointInformation* DoublePointInformation;
@@ -426,7 +426,7 @@ CP56Time2a
 DoublePointWithCP56Time2a_getTimestamp(DoublePointWithCP56Time2a self);
 
 /************************************************
- * StepPositionInformation (:InformationObject)
+ * StepPositionInformation (:InformationObject) 步位置信息
  ************************************************/
 
 typedef struct sStepPositionInformation* StepPositionInformation;
