@@ -61,8 +61,8 @@ typedef enum {
 typedef bool (*CS104_ConnectionRequestHandler) (void* parameter, const char* ipAddress);
 
 //protocal message transfer
-typedef bool (*CS104_MSGRecvHandler) (void* parameter, uint8_t* buffer, int msgSize,char* ipAddress);
-typedef bool (*CS104_MSGSendHandler) (void* parameter, uint8_t* buffer, int msgSize,char* ipAddress);
+typedef bool (*CS104_MSGRecvHandler_slave) (void* parameter, uint8_t* buffer, int msgSize,char* ipAddress);
+typedef bool (*CS104_MSGSendHandler_slave) (void* parameter, uint8_t* buffer, int msgSize,char* ipAddress);
 
 typedef bool (*CS104_ConnectionBrokenHandler) (void* parameter, const char* ipAddress);
 
@@ -136,10 +136,10 @@ void
 CS104_Slave_setConnectionRequestHandler(CS104_Slave self, CS104_ConnectionRequestHandler handler, void* parameter);
 
 void
-CS104_Slave_setMsgrecvHandler(CS104_Slave self, CS104_MSGRecvHandler handler, void* parameter);
+CS104_Slave_setMsgrecvHandler(CS104_Slave self, CS104_MSGRecvHandler_slave handler, void* parameter);
 
 void
-CS104_Slave_setMsgsendHandler(CS104_Slave self, CS104_MSGSendHandler handler, void* parameter);
+CS104_Slave_setMsgsendHandler(CS104_Slave self, CS104_MSGSendHandler_slave handler, void* parameter);
 
 void
 CS104_Slave_setConnectionBrokenHandler(CS104_Slave self, CS104_ConnectionBrokenHandler handler, void* parameter);

@@ -607,10 +607,10 @@ struct sCS104_Slave {
     void* connectionRequestHandlerParameter;
 
     //============= add for 104 monitor =============//
-    CS104_MSGRecvHandler msgrecvHandler;
+    CS104_MSGRecvHandler_slave msgrecvHandler;
     void* msgrecvHandlerParameter;
 
-    CS104_MSGSendHandler msgsendHandler;
+    CS104_MSGSendHandler_slave msgsendHandler;
     void* msgsendHandlerParameter;
 
     CS104_ConnectionBrokenHandler connectionBrokenHandler;
@@ -863,14 +863,14 @@ CS104_Slave_setConnectionRequestHandler(CS104_Slave self, CS104_ConnectionReques
 }
 
 void
-CS104_Slave_setMsgrecvHandler(CS104_Slave self, CS104_MSGRecvHandler handler, void* parameter)
+CS104_Slave_setMsgrecvHandler(CS104_Slave self, CS104_MSGRecvHandler_slave handler, void* parameter)
 {
     self->msgrecvHandler = handler;
     self->msgrecvHandlerParameter = parameter;
 }
 
 void
-CS104_Slave_setMsgsendHandler(CS104_Slave self, CS104_MSGSendHandler handler, void* parameter)
+CS104_Slave_setMsgsendHandler(CS104_Slave self, CS104_MSGSendHandler_slave handler, void* parameter)
 {
     self->msgsendHandler = handler;
     self->msgsendHandlerParameter = parameter;
