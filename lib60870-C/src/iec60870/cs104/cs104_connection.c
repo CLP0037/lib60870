@@ -4074,3 +4074,471 @@ CS104_Connection_connect_sDEV(CS104_Connection self)
 
 
 //===============  104 connection : as client and as slave device(simulation equipment) ==============//
+
+//===============  uv connection (connection based on libuv)==============//
+#if (CONFIG_USE_THREADS == 0)//0//
+
+//=============参数设置与获取==============//
+int T104Connection_get_tcpmallocsize(T104Connection self)
+{
+    return (self->malloc_size_tcp_dev);
+}
+
+int T104Connection_get_tcpPort(T104Connection self)
+{
+    return (self->tcpPort);
+}
+
+char* T104Connection_get_hostname(T104Connection self)
+{
+    return (char*)(self->hostname);
+}
+
+bool T104Connection_get_running(T104Connection self)
+{
+    return (self->running);
+}
+
+void T104Connection_set_running(T104Connection self,bool flag)
+{
+    self->running = flag ;
+}
+
+int T104Connection_getDevlinkfd(T104Connection self)
+{
+    return (self->DEV_fd);
+}
+
+void T104Connection_setDevlinkfd(T104Connection self,int dev_fd)
+{
+    self->DEV_fd = dev_fd;
+}
+
+int T104Connection_getDevlinkindex(T104Connection self)
+{
+    return (self->DEV_link_index);
+}
+
+void T104Connection_setDevlinkindex(T104Connection self,int dev_index)
+{
+    self->DEV_link_index = dev_index;
+}
+
+int T104Connection_getDEV_addr(T104Connection self)
+{
+    return (self->DEV_addr);
+}
+
+void T104Connection_setDEV_addr(T104Connection self,int dev_addr)
+{
+    self->DEV_addr = dev_addr;
+}
+
+int T104Connection_getDEV_sn(T104Connection self)
+{
+    return (self->DEV_sn);
+}
+
+void T104Connection_setDEV_sn(T104Connection self,int dev_sn)
+{
+    self->DEV_sn = dev_sn;
+}
+
+//uv_tcp_t * uv_client
+uv_tcp_t* T104Connection_get_uv_client(T104Connection self)
+{
+    return (self->uv_client);
+}
+
+//SummonTime
+unsigned int T104Connection_getSummonTime(T104Connection self)
+{
+    return (self->SummonTime);
+}
+
+void T104Connection_setSummonTime(T104Connection self,unsigned int _count)
+{
+    self->SummonTime = _count;
+}
+
+void T104Connection_setSummonTime_plus(T104Connection self)
+{
+    self->SummonTime++;
+}
+
+//TimeSynTime
+unsigned int T104Connection_getTimeSynTime(T104Connection self)
+{
+    return (self->TimeSynTime);
+}
+
+void T104Connection_setTimeSynTime(T104Connection self,unsigned int _count)
+{
+    self->TimeSynTime = _count;
+}
+
+void T104Connection_setTimeSynTime_plus(T104Connection self)
+{
+    self->TimeSynTime++;
+}
+
+//LinkBeatTime
+unsigned int T104Connection_getLinkBeatTime(T104Connection self)
+{
+    return (self->LinkBeatTime);
+}
+
+void T104Connection_setLinkBeatTime(T104Connection self,unsigned int _count)
+{
+    self->LinkBeatTime = _count;
+}
+
+void T104Connection_setLinkBeatTime_plus(T104Connection self)
+{
+    self->LinkBeatTime++;
+}
+
+//    bool firsttime_link;//设备信息新增后第一次主动启动链路初始化
+bool T104Connection_getfirsttime_link(T104Connection self)
+{
+    return (self->firsttime_link);
+}
+
+void T104Connection_setfirsttime_link(T104Connection self,bool flag)
+{
+    self->firsttime_link = flag;
+}
+
+//    bool firsttime_DataCall;//初始化后的总召
+bool T104Connection_getfirsttime_DataCall(T104Connection self)
+{
+    return (self->firsttime_DataCall);
+}
+
+void T104Connection_setfirsttime_DataCall(T104Connection self,bool flag)
+{
+    self->firsttime_DataCall = flag;
+}
+
+//    bool firsttime_ClockSync;//初始化后的时钟同步
+bool T104Connection_getfirsttime_ClockSync(T104Connection self)
+{
+    return (self->firsttime_ClockSync);
+}
+
+void T104Connection_setfirsttime_ClockSync(T104Connection self,bool flag)
+{
+    self->firsttime_ClockSync = flag;
+}
+
+//cmd from hmi
+//flag_cmdfromhmi_call
+bool T104Connection_getflag_cmdfromhmi_call(T104Connection self)
+{
+    return (self->flag_cmdfromhmi_call);
+}
+
+void T104Connection_setflag_cmdfromhmi_call(T104Connection self,bool flag)
+{
+    self->flag_cmdfromhmi_call = flag;
+}
+
+//    bool flag_cmdfromhmi_time;
+bool T104Connection_getflag_cmdfromhmi_time(T104Connection self)
+{
+    return (self->flag_cmdfromhmi_time);
+}
+
+void T104Connection_setflag_cmdfromhmi_time(T104Connection self,bool flag)
+{
+    self->flag_cmdfromhmi_time = flag;
+}
+
+//    bool flag_cmdfromhmi_test;
+bool T104Connection_getflag_cmdfromhmi_test(T104Connection self)
+{
+    return (self->flag_cmdfromhmi_test);
+}
+
+void T104Connection_setflag_cmdfromhmi_test(T104Connection self,bool flag)
+{
+    self->flag_cmdfromhmi_test = flag;
+}
+
+//    bool flag_cmdfromhmi_control;
+bool T104Connection_getflag_cmdfromhmi_control_select(T104Connection self)
+{
+    return (self->flag_cmdfromhmi_control_select);
+}
+void T104Connection_setflag_cmdfromhmi_control_select(T104Connection self,bool flag)
+{
+    self->flag_cmdfromhmi_control_select = flag;
+}
+
+bool T104Connection_getflag_cmdfromhmi_control_exc(T104Connection self)
+{
+    return (self->flag_cmdfromhmi_control_exc);
+}
+void T104Connection_setflag_cmdfromhmi_control_exc(T104Connection self,bool flag)
+{
+    self->flag_cmdfromhmi_control_exc = flag;
+}
+
+bool T104Connection_getflag_cmdfromhmi_control_quit(T104Connection self)
+{
+    return (self->flag_cmdfromhmi_control_quit);
+}
+void T104Connection_setflag_cmdfromhmi_control_quit(T104Connection self,bool flag)
+{
+    self->flag_cmdfromhmi_control_quit = flag;
+}
+//    bool flag_cmdfromhmi_menu;
+bool T104Connection_getflag_cmdfromhmi_menu(T104Connection self)
+{
+    return (self->flag_cmdfromhmi_menu);
+}
+
+void T104Connection_setflag_cmdfromhmi_menu(T104Connection self,bool flag)
+{
+    self->flag_cmdfromhmi_menu = flag;
+}
+
+//    bool flag_cmdfromhmi_file;
+bool T104Connection_getflag_cmdfromhmi_file(T104Connection self)
+{
+    return (self->flag_cmdfromhmi_file);
+}
+
+void T104Connection_setflag_cmdfromhmi_file(T104Connection self,bool flag)
+{
+    self->flag_cmdfromhmi_file = flag;
+}
+
+//=============参数设置与获取==============//
+
+
+//====================callback function=======================//
+
+
+void T104Connection_connectDestroy(T104Connection self)
+{
+    Socket_destroy(self->socket);
+    self->running = false;
+}
+
+
+
+void Frame_deal(T104Connection self, unsigned char * buf, int len)
+{
+    char printout[65535]={};
+    //syslog(LOG_INFO,"deal len  = : %d\n", len);
+    sprintf(printout,"[%s:%d_fd%d_sn%d]<=",self->hostname,self->tcpPort,self->DEV_fd,self->DEV_sn);
+    unsigned int prefix_len = strlen(printout);
+    for(unsigned int i=0;i<len;i++){
+        sprintf(printout+prefix_len+i*3,"%02x ",buf[i]);//we assume strlen(IN_FLAG) == strlen(OUT_FLAG)
+    }
+    prefix_len = strlen(printout);
+    sprintf(printout+prefix_len,"End\n");
+#ifndef WIN32
+    syslog(LOG_DEBUG,"%s",printout);
+#else
+    printf("%s\n",printout);
+#endif
+
+
+    if(checkMessage(self, buf, len)==false){
+        self->failure = true;
+    }
+
+    if (self->unconfirmedReceivedIMessages >=self->parameters.w) {
+        self->lastConfirmationTime = Hal_getTimeInMs();
+        self->unconfirmedReceivedIMessages = 0;
+        sendSMessage(self);//接收I帧数量到达8帧，发送确认
+    }
+
+}
+
+void Frame_parse(T104Connection self, uint8_t* buf, int len)
+{
+    #define TEMPBUFFLEN 2*256
+    static unsigned char temp_buf[TEMPBUFFLEN]={};
+    static int temp_size = 0;
+
+    if(len + temp_size <= TEMPBUFFLEN) {
+        memcpy(temp_buf + temp_size, buf, len);
+    }
+    else{
+        memset(temp_buf,0,TEMPBUFFLEN);
+        memcpy(temp_buf, buf, len);
+        temp_size = 0;
+    }
+    int l = len + temp_size;
+
+    int return_dataType=0;
+    int deal_len=0;
+
+    unsigned char *ptr = temp_buf;
+    while(l>=6){
+        if(ptr[0]==0x68)
+        {
+           deal_len=ptr[1]+2;
+            if(l>=deal_len)
+            {
+                l-=deal_len;
+                Frame_deal(self,ptr,deal_len);
+                ptr += deal_len;
+            }
+            else
+                break;//半帧，等待下一次完整组包
+        }
+        else
+        {//非法帧===移除帧头
+            l-=1;
+            ptr++;
+        }
+    }
+    memmove(temp_buf,temp_buf+(len+temp_size) - l, l);
+    temp_size = l;
+}
+
+static void on_close_104(uv_handle_t* handle)
+{
+    syslog(LOG_INFO,"closed.");
+    T104Connection self = ((T104Connection)(((uv_tcp_t*)handle)->data));
+    if (self->connectionHandler != NULL)
+                self->connectionHandler(self->connectionHandlerParameter, self, IEC60870_CONNECTION_CLOSED);
+    free(handle);
+}
+
+static void on_read(uv_stream_t* tcp, ssize_t nread, const uv_buf_t* buf)
+{
+    //syslog(LOG_INFO,"nread = : %d\n", nread);
+    if(nread <0){
+        syslog(LOG_ERR,"read buffer len <0(nread: %d),Read error %s,exc uv_close current connection",nread,uv_err_name(nread));
+        fprintf(stderr, "Read error %s\n", uv_err_name(nread));
+        uv_close((uv_handle_t*)tcp, on_close_104);
+    }
+    else{
+        //write_req_t *req1 = (write_req_t*) malloc(sizeof(write_req_t));
+        T104Connection self = ((T104Connection)(((uv_tcp_t*)tcp)->data));
+
+        char printout[65535]={};
+        //syslog(LOG_INFO,"nread = : %d\n", nread);
+        sprintf(printout,"[%s:%d_fd%d_sn%d_all]<=",self->hostname,self->tcpPort,self->DEV_fd,self->DEV_sn);
+        unsigned int prefix_len = strlen(printout);
+        if(nread * 3 + prefix_len > 65535)
+        syslog(LOG_INFO,"on_read got a big buf with len = %d,the packet print is trunked!",nread);
+        for(unsigned int i=0;i<nread;i++){
+            if(i * 3 < 65535-prefix_len)
+                sprintf(printout+prefix_len+i*3,"%02x ",(unsigned char)(buf->base[i]));
+            else
+                break;
+            }
+#ifndef WIN32
+    syslog(LOG_DEBUG,"%s",printout);
+#else
+    printf("%s\n",printout);
+#endif
+
+        //分帧处理
+        Frame_parse(self, buf->base, nread);
+    }
+    if (buf->base)
+        free(buf->base);
+}
+
+static void alloc_cb(uv_handle_t* handle, size_t size, uv_buf_t* buf)
+{
+    //===//* buf = uv_buf_init((char * ) malloc(size), size);
+    buf->base = malloc(size);
+    buf->len = size;
+}
+
+void on_connect(uv_connect_t* connection, int status)
+{
+    if(connection==NULL){
+        syslog(LOG_ERR,"uv_connect_t* connection is NULL\n");
+        return;
+    }
+
+    if (status < 0) {
+        syslog(LOG_ERR,"status < 0(%d),connect failed:%s!",status,uv_strerror(status));
+        uv_close((uv_handle_t*)connection, on_close_104);//on_close_104
+        return;
+    }
+
+    uv_stream_t* stream = connection->handle;
+    //成功建立连接，获取fd
+    uv_os_fd_t fd_1;
+    int r_value1 = uv_fileno((const uv_handle_t*) stream, &fd_1);
+    T104Connection self = ((T104Connection)(((uv_tcp_t*)stream)->data));
+    Socket_setFd(self->socket, (int)fd_1);
+    self->DEV_fd=(int)fd_1;
+    syslog(LOG_INFO,"After fd get:tcpPort = %d;hostname = %s;DEV_fd =%d***firsttime link ok,sendStartDT****",((T104Connection)self)->tcpPort,((T104Connection)self)->hostname,((T104Connection)self)->DEV_fd);
+
+    //成功建立连接后，发送建立链路
+    //syslog(LOG_INFO,"firsttime link,sendStartDT****\n");
+
+    if(self->firsttime_link)
+    {
+        self->firsttime_link = false;
+        self->firsttime_DataCall = true ;
+        self->firsttime_ClockSync = true ;
+        T104Connection_sendStartDT(self);
+    }
+    uv_read_start(stream, alloc_cb, on_read);
+}
+
+bool handleTimeouts_104(T104Connection self)
+{
+    return handleTimeouts(self);
+}
+//====================callback function=======================//
+
+bool
+CS104_Connection_connectAsync_uv(T104Connection self ,uv_loop_t* loop)
+{
+    struct sockaddr_in addr;
+    int r;
+
+    resetConnection(self);
+    self->socket = TcpSocket_create();
+    Socket_setConnectTimeout(self->socket, self->connectTimeoutInMs);
+
+    //ASSERT(0 == uv_ip4_addr(self->hostname, self->tcpPort, &addr));
+    r = uv_ip4_addr(self->hostname, self->tcpPort, &addr);
+    if(r != 0)
+    {
+        syslog(LOG_ERR,"DEV_[%s:%d] uv_ip4_addr error: %s",((T104Connection)self)->hostname,((T104Connection)self)->tcpPort,uv_strerror(r));
+        return false;
+    }
+    uv_tcp_t * client = (uv_tcp_t * ) malloc(sizeof(uv_tcp_t));
+    r = uv_tcp_init(loop, client);
+    if (r != 0)
+    {
+        syslog(LOG_ERR,"DEV_[%s:%d] uv_ip4_init error: %s",((T104Connection)self)->hostname,((T104Connection)self)->tcpPort,uv_strerror(r));
+        return false;
+    }
+    //self->running=true;
+    self->uv_client = client;
+    client->data = self;
+
+    uv_connect_t* connect = (uv_connect_t*)malloc(sizeof(uv_connect_t));
+    syslog(LOG_INFO,"DEV_[%s:%d] prepare uv_tcp_connect",((T104Connection)self)->hostname,((T104Connection)self)->tcpPort);
+    r = uv_tcp_connect(connect, client,  (const struct sockaddr*) &addr, on_connect);
+    if(r != 0)
+    {
+        syslog(LOG_ERR,"DEV_[%s:%d] uv_ip4_connect error: %s(%d)",((T104Connection)self)->hostname,((T104Connection)self)->tcpPort,uv_strerror(r),r);
+        uv_close((uv_handle_t*)client, NULL);
+        if(connect)
+            free(connect);
+        return false;
+    }
+    syslog(LOG_INFO,"DEV_[%s:%d] uv_ip4_connect ok(return 0)",((T104Connection)self)->hostname,((T104Connection)self)->tcpPort);
+    self->running=true;
+    return self->running;
+    //return true;
+}
+
+#endif
+

@@ -32,6 +32,12 @@
 
 #include "hal_serial.h"  // for serialport
 
+#include "lib60870_config.h"
+#if (CONFIG_USE_THREADS == 0)//0//
+#include <uv.h>
+//#else
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -536,6 +542,76 @@ CS104_Connection_connect_sDEV(CS104_Connection self);
 
 
 //===============  104 connection : as client and as slave device(simulation equipment) ==============//
+
+
+//===============  uv connection (connection based on libuv)==============//
+#if (CONFIG_USE_THREADS == 0)//
+
+//=============参数设置与获取==============//
+int T104Connection_get_tcpmallocsize(T104Connection self);
+int T104Connection_get_tcpPort(T104Connection self);
+char* T104Connection_get_hostname(T104Connection self);
+bool T104Connection_get_running(T104Connection self);
+void T104Connection_set_running(T104Connection self,bool flag);
+
+int T104Connection_getDevlinkfd(T104Connection self);
+void T104Connection_setDevlinkfd(T104Connection self,int dev_fd);
+
+int T104Connection_getDevlinkindex(T104Connection self);
+void T104Connection_setDevlinkindex(T104Connection self,int dev_index);
+
+int T104Connection_getDEV_addr(T104Connection self);
+void T104Connection_setDEV_addr(T104Connection self,int dev_addr);
+
+int T104Connection_getDEV_sn(T104Connection self);
+void T104Connection_setDEV_sn(T104Connection self,int dev_sn);
+
+uv_tcp_t* T104Connection_get_uv_client(T104Connection self);
+
+unsigned int T104Connection_getSummonTime(T104Connection self);
+void T104Connection_setSummonTime(T104Connection self,unsigned int _count);
+void T104Connection_setSummonTime_plus(T104Connection self);
+
+unsigned int T104Connection_getTimeSynTime(T104Connection self);
+void T104Connection_setTimeSynTime(T104Connection self,unsigned int _count);
+void T104Connection_setTimeSynTime_plus(T104Connection self);
+
+unsigned int T104Connection_getLinkBeatTime(T104Connection self);
+void T104Connection_setLinkBeatTime(T104Connection self,unsigned int _count);
+void T104Connection_setLinkBeatTime_plus(T104Connection self);
+
+bool T104Connection_getfirsttime_link(T104Connection self);
+void T104Connection_setfirsttime_link(T104Connection self,bool flag);
+bool T104Connection_getfirsttime_DataCall(T104Connection self);
+void T104Connection_setfirsttime_DataCall(T104Connection self,bool flag);
+ bool T104Connection_getfirsttime_ClockSync(T104Connection self);
+void T104Connection_setfirsttime_ClockSync(T104Connection self,bool flag);
+
+bool T104Connection_getflag_cmdfromhmi_call(T104Connection self);
+void T104Connection_setflag_cmdfromhmi_call(T104Connection self,bool flag);
+bool T104Connection_getflag_cmdfromhmi_time(T104Connection self);
+void T104Connection_setflag_cmdfromhmi_time(T104Connection self,bool flag);
+bool T104Connection_getflag_cmdfromhmi_test(T104Connection self);
+void T104Connection_setflag_cmdfromhmi_test(T104Connection self,bool flag);
+bool T104Connection_getflag_cmdfromhmi_control_select(T104Connection self);
+void T104Connection_setflag_cmdfromhmi_control_select(T104Connection self,bool flag);
+bool T104Connection_getflag_cmdfromhmi_control_exc(T104Connection self);
+void T104Connection_setflag_cmdfromhmi_control_exc(T104Connection self,bool flag);
+bool T104Connection_getflag_cmdfromhmi_control_quit(T104Connection self);
+void T104Connection_setflag_cmdfromhmi_control_quit(T104Connection self,bool flag);
+bool T104Connection_getflag_cmdfromhmi_menu(T104Connection self);
+void T104Connection_setflag_cmdfromhmi_menu(T104Connection self,bool flag);
+bool T104Connection_getflag_cmdfromhmi_file(T104Connection self);
+void T104Connection_setflag_cmdfromhmi_file(T104Connection self,bool flag);
+//=============参数设置与获取==============//
+
+
+
+//连接设备
+bool
+CS104_Connection_connectAsync_uv(T104Connection self ,uv_loop_t* loop);
+
+#endif
 
 
 /*! @} */
