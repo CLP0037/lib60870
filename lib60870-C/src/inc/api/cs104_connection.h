@@ -548,68 +548,68 @@ CS104_Connection_connect_sDEV(CS104_Connection self);
 #if (CONFIG_USE_THREADS == 0)//
 
 //=============参数设置与获取==============//
-int T104Connection_get_tcpmallocsize(T104Connection self);
-int T104Connection_get_tcpPort(T104Connection self);
-char* T104Connection_get_hostname(T104Connection self);
-bool T104Connection_get_running(T104Connection self);
-void T104Connection_set_running(T104Connection self,bool flag);
+int CS104_Connection_get_tcpmallocsize(CS104_Connection self);
+int CS104_Connection_get_tcpPort(CS104_Connection self);
+char* CS104_Connection_get_hostname(CS104_Connection self);
+bool CS104_Connection_get_running(CS104_Connection self);
+void CS104_Connection_set_running(CS104_Connection self,bool flag);
 
-int T104Connection_getDevlinkfd(T104Connection self);
-void T104Connection_setDevlinkfd(T104Connection self,int dev_fd);
+int CS104_Connection_getDevlinkfd(CS104_Connection self);
+void CS104_Connection_setDevlinkfd(CS104_Connection self,int dev_fd);
 
-int T104Connection_getDevlinkindex(T104Connection self);
-void T104Connection_setDevlinkindex(T104Connection self,int dev_index);
+int CS104_Connection_getDevlinkindex(CS104_Connection self);
+void CS104_Connection_setDevlinkindex(CS104_Connection self,int dev_index);
 
-int T104Connection_getDEV_addr(T104Connection self);
-void T104Connection_setDEV_addr(T104Connection self,int dev_addr);
+int CS104_Connection_getDEV_addr(CS104_Connection self);
+void CS104_Connection_setDEV_addr(CS104_Connection self,int dev_addr);
 
-int T104Connection_getDEV_sn(T104Connection self);
-void T104Connection_setDEV_sn(T104Connection self,int dev_sn);
+int CS104_Connection_getDEV_sn(CS104_Connection self);
+void CS104_Connection_setDEV_sn(CS104_Connection self,int dev_sn);
 
-uv_tcp_t* T104Connection_get_uv_client(T104Connection self);
+uv_tcp_t* CS104_Connection_get_uv_client(CS104_Connection self);
 
-unsigned int T104Connection_getSummonTime(T104Connection self);
-void T104Connection_setSummonTime(T104Connection self,unsigned int _count);
-void T104Connection_setSummonTime_plus(T104Connection self);
+unsigned int CS104_Connection_getSummonTime(CS104_Connection self);
+void CS104_Connection_setSummonTime(CS104_Connection self,unsigned int _count);
+void CS104_Connection_setSummonTime_plus(CS104_Connection self);
 
-unsigned int T104Connection_getTimeSynTime(T104Connection self);
-void T104Connection_setTimeSynTime(T104Connection self,unsigned int _count);
-void T104Connection_setTimeSynTime_plus(T104Connection self);
+unsigned int CS104_Connection_getTimeSynTime(CS104_Connection self);
+void CS104_Connection_setTimeSynTime(CS104_Connection self,unsigned int _count);
+void CS104_Connection_setTimeSynTime_plus(CS104_Connection self);
 
-unsigned int T104Connection_getLinkBeatTime(T104Connection self);
-void T104Connection_setLinkBeatTime(T104Connection self,unsigned int _count);
-void T104Connection_setLinkBeatTime_plus(T104Connection self);
+unsigned int CS104_Connection_getLinkBeatTime(CS104_Connection self);
+void CS104_Connection_setLinkBeatTime(CS104_Connection self,unsigned int _count);
+void CS104_Connection_setLinkBeatTime_plus(CS104_Connection self);
 
-bool T104Connection_getfirsttime_link(T104Connection self);
-void T104Connection_setfirsttime_link(T104Connection self,bool flag);
-bool T104Connection_getfirsttime_DataCall(T104Connection self);
-void T104Connection_setfirsttime_DataCall(T104Connection self,bool flag);
- bool T104Connection_getfirsttime_ClockSync(T104Connection self);
-void T104Connection_setfirsttime_ClockSync(T104Connection self,bool flag);
+bool CS104_Connection_getfirsttime_link(CS104_Connection self);
+void CS104_Connection_setfirsttime_link(CS104_Connection self,bool flag);
+bool CS104_Connection_getfirsttime_DataCall(CS104_Connection self);
+void CS104_Connection_setfirsttime_DataCall(CS104_Connection self,bool flag);
+ bool CS104_Connection_getfirsttime_ClockSync(CS104_Connection self);
+void CS104_Connection_setfirsttime_ClockSync(CS104_Connection self,bool flag);
 
-bool T104Connection_getflag_cmdfromhmi_call(T104Connection self);
-void T104Connection_setflag_cmdfromhmi_call(T104Connection self,bool flag);
-bool T104Connection_getflag_cmdfromhmi_time(T104Connection self);
-void T104Connection_setflag_cmdfromhmi_time(T104Connection self,bool flag);
-bool T104Connection_getflag_cmdfromhmi_test(T104Connection self);
-void T104Connection_setflag_cmdfromhmi_test(T104Connection self,bool flag);
-bool T104Connection_getflag_cmdfromhmi_control_select(T104Connection self);
-void T104Connection_setflag_cmdfromhmi_control_select(T104Connection self,bool flag);
-bool T104Connection_getflag_cmdfromhmi_control_exc(T104Connection self);
-void T104Connection_setflag_cmdfromhmi_control_exc(T104Connection self,bool flag);
-bool T104Connection_getflag_cmdfromhmi_control_quit(T104Connection self);
-void T104Connection_setflag_cmdfromhmi_control_quit(T104Connection self,bool flag);
-bool T104Connection_getflag_cmdfromhmi_menu(T104Connection self);
-void T104Connection_setflag_cmdfromhmi_menu(T104Connection self,bool flag);
-bool T104Connection_getflag_cmdfromhmi_file(T104Connection self);
-void T104Connection_setflag_cmdfromhmi_file(T104Connection self,bool flag);
+bool CS104_Connection_getflag_cmdfromhmi_call(CS104_Connection self);
+void CS104_Connection_setflag_cmdfromhmi_call(CS104_Connection self,bool flag);
+bool CS104_Connection_getflag_cmdfromhmi_time(CS104_Connection self);
+void CS104_Connection_setflag_cmdfromhmi_time(CS104_Connection self,bool flag);
+bool CS104_Connection_getflag_cmdfromhmi_test(CS104_Connection self);
+void CS104_Connection_setflag_cmdfromhmi_test(CS104_Connection self,bool flag);
+bool CS104_Connection_getflag_cmdfromhmi_control_select(CS104_Connection self);
+void CS104_Connection_setflag_cmdfromhmi_control_select(CS104_Connection self,bool flag);
+bool CS104_Connection_getflag_cmdfromhmi_control_exc(CS104_Connection self);
+void CS104_Connection_setflag_cmdfromhmi_control_exc(CS104_Connection self,bool flag);
+bool CS104_Connection_getflag_cmdfromhmi_control_quit(CS104_Connection self);
+void CS104_Connection_setflag_cmdfromhmi_control_quit(CS104_Connection self,bool flag);
+bool CS104_Connection_getflag_cmdfromhmi_menu(CS104_Connection self);
+void CS104_Connection_setflag_cmdfromhmi_menu(CS104_Connection self,bool flag);
+bool CS104_Connection_getflag_cmdfromhmi_file(CS104_Connection self);
+void CS104_Connection_setflag_cmdfromhmi_file(CS104_Connection self,bool flag);
 //=============参数设置与获取==============//
 
 
 
 //连接设备
 bool
-CS104_Connection_connectAsync_uv(T104Connection self ,uv_loop_t* loop);
+CS104_Connection_connectAsync_uv(CS104_Connection self ,uv_loop_t* loop);
 
 #endif
 
