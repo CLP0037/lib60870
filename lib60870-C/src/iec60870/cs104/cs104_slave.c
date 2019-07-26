@@ -1694,8 +1694,9 @@ sendNextLowPriorityASDU(MasterConnection self)
 
 exit_function:
 #if (CONFIG_USE_THREADS == 1)
-    Semaphore_post(self->sentASDUsLock);
+    Semaphore_post(self->sentASDUsLock);    
 #endif
+    printf("sendNextLowPriorityASDU exit_function\n");
 }
 
 static bool
