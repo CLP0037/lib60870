@@ -1702,7 +1702,7 @@ handleConnection_comm(void* parameter)
 #ifdef WIN32
         qDebug()<<"DEBUG_LIB60870:(warnning)"<<"RECV[68]: Timeout reading variable length frame size = "<<readBytes<<" (expected = "<<msgSize<<")";
 #else
-        syslog(LOG_WARNING,"RECV[68]: Timeout reading variable length frame size = %i (expected = %i)", , readBytes, msgSize);
+        syslog(LOG_WARNING,"RECV[68]: Timeout reading variable length frame size = %i (expected = %i)", readBytes, msgSize);
 #endif
                     }
                 }
