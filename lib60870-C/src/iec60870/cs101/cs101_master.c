@@ -328,7 +328,7 @@ CS101_Master_sendLinkLayerTestFunction(CS101_Master self)
         LinkLayerBalanced_sendLinkLayerTestFunction(self->balancedLinkLayer);
 }
 
-void
+void //C_IC_NA_1=100
 CS101_Master_sendInterrogationCommand(CS101_Master self, CS101_CauseOfTransmission cot, int ca, QualifierOfInterrogation qoi)
 {
     struct sCS101_StaticASDU _asdu;
@@ -344,7 +344,7 @@ CS101_Master_sendInterrogationCommand(CS101_Master self, CS101_CauseOfTransmissi
     CS101_Master_sendASDU(self, asdu);
 }
 
-void
+void //C_CI_NA_1=101
 CS101_Master_sendCounterInterrogationCommand(CS101_Master self, CS101_CauseOfTransmission cot, int ca, uint8_t qcc)
 {
     struct sCS101_StaticASDU _asdu;
@@ -360,7 +360,7 @@ CS101_Master_sendCounterInterrogationCommand(CS101_Master self, CS101_CauseOfTra
     CS101_Master_sendASDU(self, asdu);
 }
 
-void
+void //C_RD_NA_1=102
 CS101_Master_sendReadCommand(CS101_Master self, int ca, int ioa)
 {
     struct sCS101_StaticASDU _asdu;
@@ -376,7 +376,7 @@ CS101_Master_sendReadCommand(CS101_Master self, int ca, int ioa)
     CS101_Master_sendASDU(self, asdu);
 }
 
-void
+void //C_CS_NA_1=103
 CS101_Master_sendClockSyncCommand(CS101_Master self, int ca, CP56Time2a time)
 {
     struct sCS101_StaticASDU _asdu;
@@ -392,7 +392,7 @@ CS101_Master_sendClockSyncCommand(CS101_Master self, int ca, CP56Time2a time)
     CS101_Master_sendASDU(self, asdu);
 }
 
-void
+void //C_TS_NA_1=104
 CS101_Master_sendTestCommand(CS101_Master self, int ca)
 {
     struct sCS101_StaticASDU _asdu;

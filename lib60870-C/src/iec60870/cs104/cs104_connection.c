@@ -272,6 +272,34 @@ struct sCS104_Connection_mStation {
     char* connections_ip[1024];
     int connections_port[1024];
 
+    //===uv connection===//
+#if(CONFIG_USE_THREADS == 0)
+    uv_tcp_t* uv_client;
+
+    unsigned int SummonTime;//总召时间间隔计数
+    unsigned int TimeSynTime;//对时时间间隔计数
+    unsigned int LinkBeatTime;//测试连接时间间隔计数
+
+    int DEV_fd;//设备连接fd
+    int DEV_link_index;
+    int DEV_addr;//设备地址
+    int DEV_sn;//设备主键
+
+    bool firsttime_link;//设备信息新增后第一次主动启动链路初始化
+    bool firsttime_DataCall;//初始化后的总召
+    bool firsttime_ClockSync;//初始化后的时钟同步
+
+    bool flag_cmdfromhmi_call;//来自图形的总召命令
+    bool flag_cmdfromhmi_time;
+    bool flag_cmdfromhmi_test;
+    bool flag_cmdfromhmi_control_select;
+    bool flag_cmdfromhmi_control_exc;
+    bool flag_cmdfromhmi_control_quit;
+    bool flag_cmdfromhmi_menu;
+    bool flag_cmdfromhmi_file;
+
+    unsigned int malloc_size_tcp_dev;
+#endif
 };
 
 
@@ -1020,12 +1048,12 @@ receiveMessageSocket(Socket socket, uint8_t* buffer)
         return readFirst;
     }
 
-    if (buffer[0] != 0x68)
+    if (buffer[0] != 0x68 && buffer[0] != 0x69)
     {
 #ifdef WIN32
-        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"message error,buffer[0] != 0x68,buffer[0] =="<<buffer[0];
+        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"message error,buffer[0] != 0x68/0x69,buffer[0] =="<<buffer[0];
 #else
-        syslog(LOG_WARNING,"message error,buffer[0] != 0x68,buffer[0] == %i", buffer[0]);
+        syslog(LOG_WARNING,"message error,buffer[0] != 0x68/0x69,buffer[0] == %i", buffer[0]);
 #endif
         //DEBUG_PRINT("DEBUG_LIB60870:(warnning)message error,buffer[0] != 0x68,buffer[0] == %i\n", buffer[0]);
         return -1; /* message error */
@@ -1040,13 +1068,19 @@ receiveMessageSocket(Socket socket, uint8_t* buffer)
     int length = buffer[1];
 
     /* read remaining frame */
-    if (Socket_read(socket, buffer + 2, length) != length)
+    if (buffer[0] == 0x68 && Socket_read(socket, buffer + 2, length) != length)
     {
         DEBUG_PRINT("DEBUG_LIB60870:(warnning)message error,Socket_read(socket, buffer + 2, length) != buffer[1]\n");
         return -1;
     }
+    else if (buffer[0] == 0x69 && Socket_read(socket, buffer + 2, (length+4)) != (length+4))//私有帧结构
+    {
+        DEBUG_PRINT("DEBUG_LIB60870:(warnning)message error,Socket_read(socket, buffer + 2, (length+4)) != (buffer[1]+4)\n");
+        return -1;
+    }
 
-    return length + 2;
+    //return length + 2;
+    return (buffer[0] == 0x69)?(length + 6):(length + 2);
 }
 
 static int
@@ -4406,7 +4440,7 @@ static void on_close_104(uv_handle_t* handle)
     syslog(LOG_INFO,"closed.");
     CS104_Connection self = ((CS104_Connection)(((uv_tcp_t*)handle)->data));
     if (self->connectionHandler != NULL)
-                self->connectionHandler(self->connectionHandlerParameter, self, IEC60870_CONNECTION_CLOSED);
+                self->connectionHandler(self->connectionHandlerParameter, self, CS104_CONNECTION_CLOSED);
     free(handle);
 }
 
