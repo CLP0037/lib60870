@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2017 MZ Automation GmbH
  *
  *  This file is part of lib60870-C
@@ -21,7 +21,7 @@
 
 #include "linked_list.h"
 #include "lib_memory.h"
-#ifdef WIN32
+#ifdef _WIN32
 #include <stdbool.h>
 #else
 #include <stdbool.h>

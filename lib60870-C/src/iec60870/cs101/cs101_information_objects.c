@@ -9156,7 +9156,7 @@ FileTransferWrite_encode(FileTransferWrite self, Frame frame, CS101_AppLayerPara
 
     if(self->fileCheckSum != checkSum)
     {
-        DEBUG_PRINT("checksum error");
+        DEBUG_PRINT("DEBUG_LIB60870:[FileTransferWrite_encode]checksum error");
     }
 
     return true;
@@ -9207,7 +9207,7 @@ FileTransferWrite FileTransferWrite_create(FileTransferWrite self, int ioa, uint
 
         if(fileCheckSum != checkSum)
         {
-            DEBUG_PRINT("checksum error");
+            DEBUG_PRINT("DEBUG_LIB60870:[FileTransferWrite_create]checksum error");
         }
 
     }

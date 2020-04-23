@@ -24,7 +24,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#ifdef WIN32
+#ifdef _WIN32
 #include <QDebug>
 #endif
 //#include "qdebug.h"
@@ -44,7 +44,7 @@ lib60870_debug_print(const char *format, ...)
         va_start(ap, format);
         vprintf(format, ap);
         va_end(ap);
-#ifdef WIN32
+#ifdef _WIN32
         qDebug(format);//带格式的输出问题有待解决!!!
 #endif
     }
