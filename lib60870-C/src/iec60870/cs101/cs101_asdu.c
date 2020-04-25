@@ -987,7 +987,7 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
 
         elementSize = self->parameters->sizeOfIOA + 1;
 
-        if(getFirstIOA(self)>=(0x6001+50))//CommandParamSet_getFromBuffer   信息体地址>=0x6001+50
+        if(CONFIG_USE_COMMANDPARAM && getFirstIOA(self)>=(0x6001+50))//CommandParamSet_getFromBuffer   信息体地址>=0x6001+50
             retVal = (InformationObject) CommandParamSet_getFromBuffer(NULL, self->parameters, self->payload, self->payloadSize,  index * elementSize);//
         else
             retVal = (InformationObject) SingleCommand_getFromBuffer(NULL, self->parameters, self->payload, self->payloadSize,  index * elementSize);
@@ -999,7 +999,7 @@ CS101_ASDU_getElement(CS101_ASDU self, int index)
 
         elementSize = self->parameters->sizeOfIOA + 1;
 
-        if(getFirstIOA(self)>=(0x6001+50))//CommandParamSet_getFromBuffer   信息体地址>=0x6001+50
+        if(CONFIG_USE_COMMANDPARAM && getFirstIOA(self)>=(0x6001+50))//CommandParamSet_getFromBuffer   信息体地址>=0x6001+50
             retVal = (InformationObject) CommandParamSet_getFromBuffer(NULL, self->parameters, self->payload, self->payloadSize,  index * elementSize);//
         else
             retVal = (InformationObject) DoubleCommand_getFromBuffer(NULL, self->parameters, self->payload, self->payloadSize,  index * elementSize);

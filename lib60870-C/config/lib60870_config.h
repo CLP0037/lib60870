@@ -1,4 +1,4 @@
-/*
+﻿/*
  * lib60870_config.h
  */
 
@@ -10,7 +10,8 @@
 //#define CONFIG_DEBUG_OUTPUT 0
 #define CONFIG_DEBUG_OUTPUT 1
 
-
+/* make the command param transfer  for FA project*/
+#define CONFIG_USE_COMMANDPARAM 0
 
 /**
  * Use static memory for the slave (outstation) message queue.
