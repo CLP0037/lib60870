@@ -446,12 +446,26 @@ sendIMessage(CS104_Connection self, Frame frame)
 
     //DEBUG_PRINT("sendIMessage for debug=========");
 
+    int rtn;
     if(self->connectionType == 3)//串口
     {
-        SerialPort_write(self->commPort, T104Frame_getBuffer(frame), 0, T104Frame_getMsgSize(frame));
+        rtn = SerialPort_write(self->commPort, T104Frame_getBuffer(frame), 0, T104Frame_getMsgSize(frame));
     }
     else
-        writeToSocket(self, T104Frame_getBuffer(frame), T104Frame_getMsgSize(frame));
+    {
+        rtn = writeToSocket(self, T104Frame_getBuffer(frame), T104Frame_getMsgSize(frame));
+    }
+
+    //if(rtn != T104Frame_getMsgSize(frame))//=====for debug
+    {
+#ifdef _WIN32
+        qDebug("DEBUG_LIB60870:(warnning)[sendIMessage]rtn of write is %d, msgsize of frame is %d",rtn,T104Frame_getMsgSize(frame));
+#else
+        syslog(LOG_WARNING,"[sendIMessage]rtn of write is %d, msgsize of frame is %d",rtn,T104Frame_getMsgSize(frame));
+#endif
+    }
+
+
 //    unsigned long long timestamp = Hal_getTimeInMs();
     if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()   ,timestamp
     {
@@ -990,22 +1004,20 @@ receiveMessageSocket_104P(Socket socket, uint8_t* buffer)
     if (readFirst < 1)
     {
         #ifdef _WIN32
-                qDebug()<<"DEBUG_LIB60870:(warnning)"<<"Socket_read(socket, buffer, 1) return value < 1,value is"<<readFirst;
+            qDebug("DEBUG_LIB60870:(warnning)[receiveMessageSocket_104P]Socket_read(socket, buffer, 1) return value < 1,value is %d",readFirst);
         #else
-                syslog(LOG_WARNING,"Socket_read(socket, buffer, 1) return value < 1,value is  = %i", readFirst);
+                syslog(LOG_WARNING,"[receiveMessageSocket_104P]Socket_read(socket, buffer, 1) return value < 1,value is  = %i", readFirst);
         #endif
-        //DEBUG_PRINT("DEBUG_LIB60870:(warnning)Socket_read(socket, buffer, 1) return value < 1,value is  = %i\n", readFirst);
         return readFirst;
     }
 
     if (buffer[0] != 0x68)//读取首字节失败
     {
         #ifdef _WIN32
-                qDebug()<<"DEBUG_LIB60870:(warnning)"<<"message error,buffer[0] != 0x68,buffer[0] == "<<buffer[0];
+                qDebug("DEBUG_LIB60870:(warnning)[receiveMessageSocket_104P]Socket_read buffer[0] != 0x68,buffer[0] == %i",buffer[0]);
         #else
                 syslog(LOG_WARNING,"message error,buffer[0] != 0x68,buffer[0] == ", buffer[0]);
         #endif
-        //DEBUG_PRINT("DEBUG_LIB60870:(warnning)message error,buffer[0] != 0x68,buffer[0] == %i\n", buffer[0]);
         return -2; /* message error */
     }
 
@@ -1051,11 +1063,10 @@ receiveMessageSocket(Socket socket, uint8_t* buffer)
     if (readFirst < 1)
     {
 #ifdef _WIN32
-        qDebug()<<"DEBUG_LIB60870:(warnning)"<<"Socket_read(socket, buffer, 1) return value < 1,value is "<<readFirst;
+    qDebug("DEBUG_LIB60870:(warnning)[receiveMessageSocket]Socket_read(socket, buffer, 1) return value < 1,value is %d",readFirst);
 #else
-        syslog(LOG_WARNING,"LIB60870:Socket_read(socket, buffer, 1) return value < 1,value is %d",readFirst);
+        syslog(LOG_WARNING,"[receiveMessageSocket]Socket_read(socket, buffer, 1) return value < 1,value is  = %i", readFirst);
 #endif
-        //DEBUG_PRINT("DEBUG_LIB60870:(warnning)Socket_read(socket, buffer, 1) return value < 1,value is  = %i\n", readFirst);
         return readFirst;
     }
 
@@ -1552,16 +1563,21 @@ handleConnection(void* parameter)
                     if (bytesRec <= -1) {
                         loopRunning = false;
                         self->failure = true;//perror();strerror(errno);
-                        if (self->importantInfoHandler != NULL)
+
+#ifdef _WIN32
+    qDebug("DEBUG_LIB60870:(warnning)[handleConnection]Error reading from socket,loopRunning is set false,receiveMessage bytesRec == %d,strerror(errno): %s",bytesRec,strerror(errno));
+#else
+        syslog(LOG_WARNING,"[handleConnection]Error reading from socket,loopRunning is set false,receiveMessage bytesRec == %d,strerror(errno): %s",bytesRec,strerror(errno));
+#endif
+                        /*if (self->importantInfoHandler != NULL)
                         {
                             char bytesRecstr[5];
                             itoa(bytesRec, bytesRecstr, 10);
                             printf("Error reading from socket,loopRunning is set false,receiveMessage bytesRec == %d,strerror(errno): %s\n",bytesRec,strerror(errno));
-                            //DEBUG_PRINT("Error reading from socket,loopRunning is set false,receiveMessage bytesRec == %d,strerror(errno): %s\n",bytesRec,strerror(errno));
                             self->importantInfoHandler(self->importantInfoHandlerParameter, "loopRunning is set false,receiveMessage bytesRec <0, bytesRec/strerror(errno):");
                             self->importantInfoHandler(self->importantInfoHandlerParameter, bytesRecstr);
                             self->importantInfoHandler(self->importantInfoHandlerParameter, strerror(errno));
-                        }
+                        }*///
                     }
 
                     if (bytesRec > 0) {
@@ -2138,6 +2154,22 @@ sendASDUInternal(CS104_Connection self, Frame frame)
             sendIMessageAndUpdateSentASDUs(self, frame);
             retVal = true;
         }
+        else
+        {
+        #ifdef _WIN32
+                qDebug("DEBUG_LIB60870:(warnning)[sendASDUInternal]isSentBufferFull(self) is true");
+        #else
+                syslog(LOG_WARNING,"[sendASDUInternal]self->running or self->isCommOpend is false");
+        #endif
+        }
+    }
+    else
+    {
+    #ifdef _WIN32
+            qDebug("DEBUG_LIB60870:(warnning)[sendASDUInternal]self->running or self->isCommOpend is false");
+    #else
+            syslog(LOG_WARNING,"[sendASDUInternal]self->running or self->isCommOpend is false");
+    #endif
     }
 
     T104Frame_destroy(frame);

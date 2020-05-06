@@ -22,6 +22,9 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
+#ifdef _WIN32
+#include <QDebug>
+#endif
 
 #pragma comment (lib, "Ws2_32.lib")
 
@@ -29,7 +32,7 @@
 #include "lib_memory.h"
 #include "lib60870_config.h"
 #include "lib60870_internal.h"
-#include <qDebug>
+
 #include <stdio.h>
 
 #define DEBUG_SOCKET 0
@@ -416,21 +419,23 @@ Socket_read(Socket self, uint8_t* buf, int size)
 
     if (bytes_read == 0) // peer has closed socket
     {
-        //qDebug()<<"DEBUG_LIB60870:(warnning)"<<"recv(self->fd, (char*) buf, size, 0)==0,peer has closed socket";
-        DEBUG_PRINT("DEBUG_LIB60870:(warnning)recv(self->fd, (char*) buf, size, 0)==0,peer has closed socket\n");
+        //DEBUG_PRINT("DEBUG_LIB60870:(warnning)recv(self->fd, (char*) buf, size, 0)==0,peer has closed socket\n");
+#ifdef _WIN32
+        qDebug("DEBUG_LIB60870:(warnning)[Socket_read]recv len is 0, peer has closed socket");
+#else
+        syslog(LOG_WARNING,"[Socket_read]recv len is 0, peer has closed socket");
+#endif
         return -1;
     }
 
     if (bytes_read == SOCKET_ERROR) {
         if (WSAGetLastError() == WSAEWOULDBLOCK)
         {
-            //qDebug()<<"DEBUG_LIB60870:(warnning)"<<"recv(self->fd, (char*) buf, size, 0)==SOCKET_ERROR,WSAGetLastError()==WSAEWOULDBLOCK";
             DEBUG_PRINT("DEBUG_LIB60870:(warnning)recv(self->fd, (char*) buf, size, 0)==SOCKET_ERROR,WSAGetLastError()==WSAEWOULDBLOCK\n");
             return 0;
         }
         else
         {
-            //qDebug()<<"DEBUG_LIB60870:(warnning)"<<"recv(self->fd, (char*) buf, size, 0)==SOCKET_ERROR";
             DEBUG_PRINT("DEBUG_LIB60870:(warnning)recv(self->fd, (char*) buf, size, 0)==SOCKET_ERROR\n");
             return -1;
         }
