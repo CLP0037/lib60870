@@ -51,8 +51,8 @@
 
 struct sCS104_APCIParameters defaultAPCIParameters = {
         /* .k = */ 32767,  //default 12
-        /* .w = */ 1,   //default 8
-		/* .t0 = */ 10,
+        /* .w = */ 1,      //default 8
+        /* .t0 = */  2,    //default 30
 		/* .t1 = */ 15,
 		/* .t2 = */ 10,
         /* .t3 = */ 10
@@ -456,7 +456,7 @@ sendIMessage(CS104_Connection self, Frame frame)
         rtn = writeToSocket(self, T104Frame_getBuffer(frame), T104Frame_getMsgSize(frame));
     }
 
-    //if(rtn != T104Frame_getMsgSize(frame))//=====for debug
+    if(rtn != T104Frame_getMsgSize(frame))//=====for debug
     {
 #ifdef _WIN32
         qDebug("DEBUG_LIB60870:(warnning)[sendIMessage]rtn of write is %d, msgsize of frame is %d",rtn,T104Frame_getMsgSize(frame));
@@ -1091,10 +1091,29 @@ receiveMessageSocket(Socket socket, uint8_t* buffer)
     int length = buffer[1];
 
     /* read remaining frame */
-    if (buffer[0] == 0x68 && Socket_read(socket, buffer + 2, length) != length)
+    if (buffer[0] == 0x68 )//&& Socket_read(socket, buffer + 2, length) != length
     {
-        DEBUG_PRINT("DEBUG_LIB60870:(warnning)message error,Socket_read(socket, buffer + 2, length) != buffer[1]\n");
+        //DEBUG_PRINT("DEBUG_LIB60870:(warnning)message error,Socket_read(socket, buffer + 2, length) != buffer[1]\n");
+        int data_len = Socket_read(socket, buffer + 2, length);
+        if(data_len != length)//理论长度和读取长度不匹配
+        {
+#ifdef _WIN32
+            QString buf_str="read buf:";
+            if(data_len>=0)
+            {
+                for(int m=0;m<(data_len+2);m++)
+                {
+                    buf_str += QString("%1 ").arg(buffer[m],2,16,QChar('0'));
+                }
+            }
+        qDebug()<<"DEBUG_LIB60870:(warnning)"<<QString("message error,%1(datafield readlen=%2;expectedlen=%3)")
+                  .arg(buf_str).arg(data_len).arg(length);
+#else
+        syslog(LOG_WARNING,"message error,Socket_read(socket, buffer + 2, length)(%i) != buffer[1](%i)", data_len,length);
+#endif
         return -1;
+        }
+
     }
     else if (buffer[0] == 0x69 && Socket_read(socket, buffer + 2, (length+4)) != (length+4))//私有帧结构
     {
