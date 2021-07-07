@@ -7687,7 +7687,7 @@ ParamValue_Read_encode(ParamValue_Read self, Frame frame, CS101_AppLayerParamete
             //固有参数信息体地址从0x8001开始编码至0x801F
             //运行参数信息体地址定义为0x8020至0x821F
             //动作参数信息体地址定义为0x8220至0x85EF
-            if(self->infoaddr[i]>=0x8001 && self->infoaddr[i] <= 0x85EF)
+            if(self->infoaddr[i]>=0x8001 && self->infoaddr[i] <= 0xFFFF)//0x85EF
             {
                 Frame_setNextByte(frame, (uint8_t)(self->infoaddr[i] & 0xff));
                 Frame_setNextByte(frame, (uint8_t)((self->infoaddr[i] / 0x100) & 0xff));
@@ -7894,7 +7894,7 @@ ParamValue_Write_encode(ParamValue_Write self, Frame frame, CS101_AppLayerParame
             //固有参数信息体地址从0x8001开始编码至0x801F
             //运行参数信息体地址定义为0x8020至0x821F
             //动作参数信息体地址定义为0x8220至0x85EF
-            if(self->structParamWrite[i].informationAddr>=0x8001 && self->structParamWrite[i].informationAddr <= 0x85EF)
+            if(self->structParamWrite[i].informationAddr>=0x8001 && self->structParamWrite[i].informationAddr <= 0xFFFF)//0x85EF
             {
                 //信息体地址 1  3 字节
                 Frame_setNextByte(frame, (uint8_t)(self->structParamWrite[i].informationAddr & 0xff));
@@ -7945,7 +7945,7 @@ ParamValue_Write_create(ParamValue_Write self, int ioa_index,int tag_index,int d
         //self->objectAddress = ioa_index;
         //self->infoaddr = ioa_index;
 
-        if(ioa_index>=0x8001 && ioa_index<=0x85EF)
+        if(ioa_index>=0x8001 && ioa_index<=0xFFFF)//0x85EF
         {
             self->structParamWrite[self->paramNums].informationAddr = ioa_index;
             self->structParamWrite[self->paramNums].tagType =tag_index;

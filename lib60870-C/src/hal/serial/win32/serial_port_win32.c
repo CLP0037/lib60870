@@ -148,9 +148,9 @@ SerialPort_open(SerialPort self)
 	else /* 2 */
 		serialParams->StopBits = TWOSTOPBITS;
 
-	if (self->parity == 'N')
+    if (self->parity == 'N' || self->parity == 0)
 		serialParams->Parity = NOPARITY;
-	else if (self->parity == 'E')
+    else if (self->parity == 'E' || self->parity == 2)
 		serialParams->Parity = EVENPARITY;
 	else /* 'O' */
 		serialParams->Parity = ODDPARITY;

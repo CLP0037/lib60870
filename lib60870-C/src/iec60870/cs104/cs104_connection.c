@@ -459,7 +459,7 @@ sendIMessage(CS104_Connection self, Frame frame)
     if(rtn != T104Frame_getMsgSize(frame))//=====for debug
     {
 #ifdef _WIN32
-        qDebug("DEBUG_LIB60870:(warnning)[sendIMessage]rtn of write is %d, msgsize of frame is %d",rtn,T104Frame_getMsgSize(frame));
+        qWarning("DEBUG_LIB60870:(warnning)[sendIMessage]rtn of write is %d, msgsize of frame is %d",rtn,T104Frame_getMsgSize(frame));
 #else
         syslog(LOG_WARNING,"[sendIMessage]rtn of write is %d, msgsize of frame is %d",rtn,T104Frame_getMsgSize(frame));
 #endif
@@ -1337,15 +1337,14 @@ qDebug("DEBUG_LIB60870:(warnning)CS101_ASDU == NULL,checkMessage return false!")
         else if (apduStartBuf == 0x83) {//buffer[2] /* TESTFR_CON */
 //            DEBUG_PRINT("Rcvd TESTFR_CON");//\n
             if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()    ,Hal_getTimeInMs()
-                self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Rcvd TESTFR_CON",self->cs104_frame,NULL);
-            //qDebug()<<"DEBUG_LIB60870:"<<"(for printtest)Rcvd TESTFR_CON\n";
+                self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"TESTFR_CON",self->cs104_frame,NULL);
 
             self->outstandingTestFCConMessages = 0;
         }
         else if (apduStartBuf == 0x07) {//buffer[2] /* STARTDT_ACT */
             //DEBUG_PRINT("Send STARTDT_CON");//\n
             if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()    ,Hal_getTimeInMs()
-                self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Send STARTDT_CON",self->cs104_frame,NULL);
+                self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"STARTDT_CON",self->cs104_frame,NULL);
             self->receiveCount = 0;//clear seqnum
             self->sendCount = 0;
             self->unconfirmedReceivedIMessages = 0;
@@ -1371,13 +1370,13 @@ qDebug("DEBUG_LIB60870:(warnning)CS101_ASDU == NULL,checkMessage return false!")
 
             if(self->msgsendHandler_withExplain != NULL)//,Hal_getTimeInMs()  ,Hal_getTimeInMs()
             {
-                self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, buffer, self->shortframesize/*6*/,"Send STARTDT_CON",self->cs104_frame,NULL);//
+                self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, buffer, self->shortframesize/*6*/,"STARTDT_CON",self->cs104_frame,NULL);//
             }
         }
         else if (apduStartBuf == 0x0b) {//buffer[2] /* STARTDT_CON */
             //DEBUG_PRINT("Received STARTDT_CON");//\n
             if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()   ,Hal_getTimeInMs()
-                self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"Rcvd STARTDT_CON",self->cs104_frame,NULL);
+                self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"STARTDT_CON",self->cs104_frame,NULL);
             self->receiveCount = 0;//clear seqnum
             self->sendCount = 0;
             self->unconfirmedReceivedIMessages = 0;
@@ -1486,9 +1485,9 @@ qDebug("DEBUG_LIB60870:(warnning)handleTimeouts,self->outstandingTestFCConMessag
                 self->cs104_frame.NS = 0;
                 self->cs104_frame.FT = 2;//frame type帧类型：1-I帧 2-U帧 3-S帧
                 if(self->baseProtocalType == 2)
-                    self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, TESTFR_ACT_MSG_104P, self->shortframesize/*6*/,"Send TESTFR_ASK(U message T3 timeout)",self->cs104_frame,NULL);//
+                    self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, TESTFR_ACT_MSG_104P, self->shortframesize/*6*/,"TESTFR_ASK",self->cs104_frame,NULL);//
                 else
-                    self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, TESTFR_ACT_MSG, self->shortframesize/*6*/,"Send TESTFR_ASK(U message T3 timeout)",self->cs104_frame,NULL);
+                    self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, TESTFR_ACT_MSG, self->shortframesize/*6*/,"TESTFR_ASK",self->cs104_frame,NULL);
             }
             self->uMessageTimeout = currentTime + (self->parameters.t1 * 1000);
             self->outstandingTestFCConMessages++;
@@ -2110,9 +2109,9 @@ CS104_Connection_sendStartDT(CS104_Connection self)
         self->cs104_frame.NS = 0;
         self->cs104_frame.FT = 2;//frame type帧类型：1-I帧 2-U帧 3-S帧
         if(self->baseProtocalType == 2)
-            self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, STARTDT_ACT_MSG_104P, self->shortframesize/*6*/,"Send STARTDT_ACT",self->cs104_frame,NULL);//
+            self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, STARTDT_ACT_MSG_104P, self->shortframesize/*6*/,"STARTDT_ACT",self->cs104_frame,NULL);//
         else
-            self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, STARTDT_ACT_MSG, self->shortframesize/*6*/,"Send STARTDT_ACT",self->cs104_frame,NULL);
+            self->msgsendHandler_withExplain(self->msgsendHandlerParameter_withExplain, STARTDT_ACT_MSG, self->shortframesize/*6*/,"STARTDT_ACT",self->cs104_frame,NULL);
     }
 }
 
@@ -2378,11 +2377,11 @@ CS104_Connection_sendResetprocessCommand(CS104_Connection self, int ca, int qrp)
     encodeIdentificationField(self, frame, C_TS_NA_1, 1, CS101_COT_ACTIVATION, ca);
 
     encodeIOA(self, frame, 0);
+    return sendASDUInternal(self, frame);
+}
 
     T104Frame_setNextByte(frame, qrp);
 
-    return sendASDUInternal(self, frame);
-}
 
 //控制命令   //<45>∶＝单点命令C_SC_NA_1,//<46>∶＝双点命令C_DC_NA_1
 /*
