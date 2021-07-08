@@ -2374,14 +2374,14 @@ CS104_Connection_sendResetprocessCommand(CS104_Connection self, int ca, int qrp)
     Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
     //Frame frame = (Frame) T104Frame_create();
 
-    encodeIdentificationField(self, frame, C_TS_NA_1, 1, CS101_COT_ACTIVATION, ca);
+    encodeIdentificationField(self, frame, C_RP_NA_1, 1, CS101_COT_ACTIVATION, ca);
 
     encodeIOA(self, frame, 0);
-    return sendASDUInternal(self, frame);
-}
 
     T104Frame_setNextByte(frame, qrp);
 
+    return sendASDUInternal(self, frame);
+}
 
 //控制命令   //<45>∶＝单点命令C_SC_NA_1,//<46>∶＝双点命令C_DC_NA_1
 /*
@@ -2405,6 +2405,27 @@ CS104_Connection_sendProcessCommand(CS104_Connection self, TypeID typeId, CS101_
     encodeIdentificationField (self, frame, typeId, 1 /* SQ:false; NumIX:1 */, cot, ca);
 
     InformationObject_encode(sc, frame, (CS101_AppLayerParameters) &(self->alParameters), false);
+
+    return sendASDUInternal(self, frame);
+}
+
+bool
+CS104_Connection_sendSetpointCommand(CS104_Connection self, int ca, int ti,int ioa,char* value)
+{
+    Frame frame = (Frame) T104Frame_create_104P(self->shortframesize);
+
+    encodeIdentificationField(self, frame, (TypeID)ti, 1, CS101_COT_ACTIVATION, ca);
+    encodeIOA(self, frame, ioa);//信息对象地址 3 字节
+
+    T104Frame_setNextByte(frame, (uint8_t) (value[0]));
+    T104Frame_setNextByte(frame, (uint8_t) (value[1]));
+    if(ti == C_SE_NC_1)
+    {
+        T104Frame_setNextByte(frame, (uint8_t) (value[2]));
+        T104Frame_setNextByte(frame, (uint8_t) (value[3]));
+    }
+
+    T104Frame_setNextByte(frame, (uint8_t)0x00);
 
     return sendASDUInternal(self, frame);
 }

@@ -320,6 +320,11 @@ bool
 CS104_Connection_sendProcessCommand(CS104_Connection self, TypeID typeId, CS101_CauseOfTransmission cot,
         int ca, InformationObject command);
 
+//===遥测置数
+bool
+CS104_Connection_sendSetpointCommand(CS104_Connection self, int ca, int ti,int ioa,char* value);
+
+
 //远程参数和数据读写
 bool
 CS104_Connection_sendParamValueRead(CS104_Connection self, CS101_CauseOfTransmission cot, int vsq,int ca, int sn,InformationObject sc);

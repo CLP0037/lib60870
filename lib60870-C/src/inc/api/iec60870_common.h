@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright 2016, 2017 MZ Automation GmbH
  *
  *  This file is part of lib60870-C
@@ -203,9 +203,9 @@ typedef enum {
     C_SC_NA_1 = 45,//<45>∶＝单点命令
     C_DC_NA_1 = 46,//<46>∶＝双点命令
     C_RC_NA_1 = 47,
-    C_SE_NA_1 = 48,
-    C_SE_NB_1 = 49,
-    C_SE_NC_1 = 50,
+    C_SE_NA_1 = 48,//置数：归一化
+    C_SE_NB_1 = 49,//置数：标度化
+    C_SE_NC_1 = 50,//置数：短浮点
     C_BO_NA_1 = 51,
     C_SC_TA_1 = 58,
     C_DC_TA_1 = 59,
