@@ -1082,18 +1082,18 @@ receiveMessageSocket(Socket socket, uint8_t* buffer)
         return -1; /* message error */
     }
 
-    if (Socket_read(socket, buffer + 1, 1) != 1)
-    {
-        DEBUG_PRINT("DEBUG_LIB60870:(warnning)Socket_read(socket, buffer + 1, 1) != 1\n");
-        return -1;
-    }
 
-    int length = buffer[1];
-
+    int length = 0;
     /* read remaining frame */
     if (buffer[0] == 0x68 )//&& Socket_read(socket, buffer + 2, length) != length
     {
-        //DEBUG_PRINT("DEBUG_LIB60870:(warnning)message error,Socket_read(socket, buffer + 2, length) != buffer[1]\n");
+        if (Socket_read(socket, buffer + 1, 1) != 1)
+        {
+            DEBUG_PRINT("DEBUG_LIB60870:(warnning)Socket_read(socket, buffer + 1, 1) != 1\n");
+            return -1;
+        }
+
+        length = buffer[1];
         int data_len = Socket_read(socket, buffer + 2, length);
         if(data_len != length)//理论长度和读取长度不匹配
         {
@@ -1115,10 +1115,25 @@ receiveMessageSocket(Socket socket, uint8_t* buffer)
         }
 
     }
-    else if (buffer[0] == 0x69 && Socket_read(socket, buffer + 2, (length+4)) != (length+4))//私有帧结构
+    else if (buffer[0] == 0x69 )//私有帧结构
     {
-        DEBUG_PRINT("DEBUG_LIB60870:(warnning)message error,Socket_read(socket, buffer + 2, (length+4)) != (buffer[1]+4)\n");
-        return -1;
+        if (Socket_read(socket, buffer + 1, 3) != 3)
+        {
+            DEBUG_PRINT("DEBUG_LIB60870:(warnning)Socket_read(socket, buffer + 1, 3) != 3\n");
+            return -1;
+        }
+
+        length = buffer[1] + buffer[2]*256;
+
+        if(Socket_read(socket, buffer + 4, (length+2)) != (length+2))
+        {
+            DEBUG_PRINT("DEBUG_LIB60870:(warnning)message error,Socket_read(socket, buffer + 2, (length+4)) != (buffer[1]+4)\n");
+            return -1;
+        }
+
+    }
+    else {
+        return -1;//帧头非法
     }
 
     //return length + 2;
@@ -1264,7 +1279,7 @@ qDebug("DEBUG_LIB60870:(warnning)checkSequenceNumber(self, frameRecvSequenceNumb
 //#endif
             if (self->msgreceivedHandler_withExplain != NULL)//,Hal_getTimeInMs()  获取当前时间时间戳   ,timestamp
                 self->msgreceivedHandler_withExplain(self->msgreceivedHandlerParameter_withExplain, buffer, msgSize,"I_frame_explain",self->cs104_frame,asdu);// Hal_getTimeInMs()
-//            DEBUG_PRINT("checkMessage(Received I frame): time %ld\n", timestamp);//
+//
 //#ifdef WIN32
 //        qDebug()<<"ReceivedIMessage(after msgreceivedHandler): "<<Hal_getTimeInMs();
 //#endif
